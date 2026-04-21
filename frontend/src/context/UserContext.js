@@ -26,6 +26,13 @@ export function UserProvider({ children }) {
     setBalance(null);
   }, []);
 
+  const requestTopup = useCallback(async (amountToman) => {
+    const { data } = await api.post('/api/wallet/topup/request', {
+      amount_toman: Number(amountToman),
+    });
+    return data;
+  }, []);
+
   useEffect(() => {
     if (localStorage.getItem('access_token')) fetchBalance();
   }, [fetchBalance]);
@@ -35,9 +42,10 @@ export function UserProvider({ children }) {
       balance,
       setBalance,
       fetchBalance,
+      requestTopup,
       logout,
     }),
-    [balance, fetchBalance, logout],
+    [balance, fetchBalance, requestTopup, logout],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

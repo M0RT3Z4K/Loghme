@@ -10,6 +10,7 @@ export function useChat(options = {}) {
   const onDoneRef = useRef(options.onAssistantDone);
   const conversationIdRef = useRef(null);
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini');
+  const [isModelLocked, setIsModelLocked] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   onDoneRef.current = options.onAssistantDone;
 
@@ -100,6 +101,7 @@ export function useChat(options = {}) {
               const j = JSON.parse(payload);
               if (j.conversation_id != null) {
                 conversationIdRef.current = j.conversation_id;
+                setIsModelLocked(true);
               }
               if (j.error) {
                 acc += `\n[OpenRouter error] ${j.error}`;
@@ -115,10 +117,10 @@ export function useChat(options = {}) {
             });
           },
         });
-      } catch {
+      } catch (err) {
         updateMsg(assistantId, {
           type: 'text',
-          content: { text: 'خطا در دریافت پاسخ.' },
+          content: { text: `خطا در دریافت پاسخ. ${err?.message || ''}`.trim() },
           position: 'left',
         });
       }
@@ -131,6 +133,7 @@ export function useChat(options = {}) {
 
   const resetChat = useCallback(() => {
     conversationIdRef.current = null;
+    setIsModelLocked(false);
     resetList([]);
     setPendingAttachments([]);
   }, [resetList]);
@@ -141,6 +144,7 @@ export function useChat(options = {}) {
     resetList: resetChat,
     selectedModel,
     setSelectedModel,
+    isModelLocked,
     pendingAttachments,
     addAttachments,
     removeAttachment,

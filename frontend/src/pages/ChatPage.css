@@ -4,5 +4,5 @@
   height: 100vh;
   width: 100%;
   overflow: hidden;
-  background: #131314;
+  background: radial-gradient(circle at top right, #252833 0%, #131314 55%);
 }

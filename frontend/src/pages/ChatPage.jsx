@@ -13,6 +13,7 @@ export default function ChatPage() {
     resetList,
     selectedModel,
     setSelectedModel,
+    isModelLocked,
     pendingAttachments,
     addAttachments,
     removeAttachment,
@@ -30,6 +31,7 @@ export default function ChatPage() {
         onSend={onSend}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
+        isModelLocked={isModelLocked}
         pendingAttachments={pendingAttachments}
         onPickFiles={async (e) => {
           await addAttachments(e.target.files);

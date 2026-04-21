@@ -1,10 +1,25 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useUser } from '../../context/UserContext';
 import './Sidebar.css';
 
 export default function Sidebar({ onNewChat }) {
   const navigate = useNavigate();
-  const { balance, logout } = useUser();
+  const { balance, logout, requestTopup } = useUser();
+  const [topupAmount, setTopupAmount] = useState(30000);
+  const [topupError, setTopupError] = useState('');
+
+  const handleTopup = async () => {
+    setTopupError('');
+    try {
+      const result = await requestTopup(topupAmount);
+      if (result?.payment_url) {
+        window.open(result.payment_url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      setTopupError(e?.response?.data?.detail || 'خطا در ساخت پرداخت');
+    }
+  };
 
   return (
     <aside className="app-sidebar">
@@ -19,9 +34,24 @@ export default function Sidebar({ onNewChat }) {
       <div className="app-sidebar__footer">
         {balance != null && (
           <div className="app-sidebar__balance">
-            موجودی: <strong>{Number(balance).toLocaleString('fa-IR')}</strong>
+            موجودی کیف پول: <strong>{Number(balance).toLocaleString('fa-IR')} تومان</strong>
           </div>
         )}
+        <div className="app-sidebar__topup">
+          <label htmlFor="topup-amount">شارژ کیف پول (حداقل ۳۰٬۰۰۰)</label>
+          <input
+            id="topup-amount"
+            type="number"
+            min={30000}
+            step={1000}
+            value={topupAmount}
+            onChange={(e) => setTopupAmount(Number(e.target.value || 0))}
+          />
+          <button type="button" className="app-sidebar__pay" onClick={handleTopup}>
+            پرداخت با زرین‌پال
+          </button>
+          {topupError && <div className="app-sidebar__error">{topupError}</div>}
+        </div>
         <button
           type="button"
           className="app-sidebar__link"

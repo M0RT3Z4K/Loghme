@@ -17,7 +17,13 @@ export async function readChatSSE(path, { token, body, onDataLine, signal }) {
     signal,
   });
   if (!res.ok) {
-    throw new Error(`Stream failed: ${res.status}`);
+    let detail = '';
+    try {
+      detail = await res.text();
+    } catch {
+      detail = '';
+    }
+    throw new Error(`Stream failed: ${res.status}${detail ? ` - ${detail}` : ''}`);
   }
 
   const reader = res.body?.getReader();

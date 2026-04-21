@@ -1,7 +1,7 @@
 /* تم تیره نزدیک به تجربهٔ چت مدرن — روی متغیرهای ChatUI سوار می‌شود */
 :root {
   --chat-primary: #8ab4f8;
-  --chat-bg: #131314;
+  --chat-bg: transparent;
   --chat-fg: #e3e3e3;
   --chat-bubble-left-bg: #2a2b2e;
   --chat-bubble-right-bg: #3c4043;
@@ -21,23 +21,26 @@
 }
 
 .Navbar {
-  background: var(--chat-navbar-bg);
+  background: rgba(30, 31, 32, 0.75);
+  backdrop-filter: blur(4px);
   border-bottom: 1px solid var(--chat-border);
 }
 
 .Composer {
-  background: var(--chat-composer-bg);
+  background: rgba(30, 31, 32, 0.88);
+  backdrop-filter: blur(4px);
   border-top: 1px solid var(--chat-border);
 }
 
 .Bubble.text {
   background: var(--chat-bubble-left-bg);
   color: var(--chat-fg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .Bubble.text[data-position='right'],
 .Bubble.text.right {
-  background: var(--chat-bubble-right-bg);
+  background: linear-gradient(135deg, #3f5d99, #4b6fb3);
 }
 
 .message-md {

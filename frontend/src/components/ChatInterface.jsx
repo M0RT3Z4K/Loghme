@@ -13,6 +13,7 @@ export default function ChatInterface({
   onSend,
   selectedModel,
   onModelChange,
+  isModelLocked,
   pendingAttachments,
   onPickFiles,
   onRemoveAttachment,
@@ -30,7 +31,10 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="chat-interface-wrap" style={{ flex: 1, minWidth: 0, height: '100%' }}>
+    <div
+      className="chat-interface-wrap"
+      style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+    >
       <div
         style={{
           display: 'flex',
@@ -47,6 +51,7 @@ export default function ChatInterface({
           id="model-select"
           value={selectedModel}
           onChange={(e) => onModelChange(e.target.value)}
+          disabled={isModelLocked}
           style={{ background: '#131314', color: '#e3e3e3', borderRadius: 6, padding: '4px 8px' }}
         >
           {MODEL_OPTIONS.map((m) => (
@@ -55,6 +60,7 @@ export default function ChatInterface({
             </option>
           ))}
         </select>
+        {isModelLocked && <span style={{ fontSize: 12, color: '#9aa0a6' }}>مدل برای این گفتگو قفل شد</span>}
         <label
           htmlFor="chat-files"
           style={{ cursor: 'pointer', marginInlineStart: 8, color: '#8ab4f8' }}
@@ -85,13 +91,15 @@ export default function ChatInterface({
           ))}
         </div>
       )}
-      <Chat
-        navbar={{ title: 'دستیار لقمـه' }}
-        messages={messages}
-        renderMessageContent={renderMessageContent}
-        onSend={onSend}
-        placeholder="پیام خود را بنویسید…"
-      />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Chat
+          navbar={{ title: 'دستیار لقمـه' }}
+          messages={messages}
+          renderMessageContent={renderMessageContent}
+          onSend={onSend}
+          placeholder="پیام خود را بنویسید…"
+        />
+      </div>
     </div>
   );
 }

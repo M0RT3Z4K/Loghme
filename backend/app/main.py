@@ -7,6 +7,7 @@ from app.db.session import engine
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.user import User
+from app.models.wallet_transaction import WalletTransaction
 
 app = FastAPI(title="Loghme API", version="0.1.0")
 
@@ -14,7 +15,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"],
     allow_headers=["*"],
 )
 
