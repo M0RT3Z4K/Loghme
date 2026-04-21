@@ -1,0 +1,81 @@
+.app-sidebar {
+  direction: rtl;
+  width: 260px;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  background: #1e1f20;
+  border-right: 1px solid #3c4043;
+  color: #e3e3e3;
+  height: 100%;
+}
+
+.app-sidebar__brand {
+  font-weight: 700;
+  padding: 1rem 1rem 0.5rem;
+  font-size: 1.1rem;
+}
+
+.app-sidebar__btn {
+  margin: 0.5rem 1rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #8ab4f8;
+  background: transparent;
+  color: #8ab4f8;
+  cursor: pointer;
+  font: inherit;
+}
+
+.app-sidebar__btn:hover {
+  background: rgba(138, 180, 248, 0.12);
+}
+
+.app-sidebar__section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9aa0a6;
+  padding: 1rem 1rem 0.35rem;
+}
+
+.app-sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.app-sidebar__placeholder {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #80868b;
+}
+
+.app-sidebar__footer {
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid #3c4043;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-sidebar__balance {
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.app-sidebar__link {
+  background: none;
+  border: none;
+  color: #8ab4f8;
+  cursor: pointer;
+  font: inherit;
+  text-align: right;
+  padding: 0;
+}
+
+.app-sidebar__link:hover {
+  text-decoration: underline;
+}
