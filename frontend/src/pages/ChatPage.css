@@ -1,8 +1,16 @@
 .chat-page {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   height: 100vh;
   width: 100%;
   overflow: hidden;
-  background: radial-gradient(circle at top right, #252833 0%, #131314 55%);
+  background: #0d0d0d;
+}
+
+.chat-page.rtl {
+  direction: rtl;
+}
+
+.chat-page.ltr {
+  direction: ltr;
 }

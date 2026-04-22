@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import asyncio
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -22,11 +23,18 @@ from app.services.ai_service import (
 )
 from app.services.memory_agent import (
     run_long_term_memory_task,
-    save_conversation_summary,
-    summarize_short_term_memory,
+    run_short_term_memory_task,
 )
 
 router = APIRouter()
+
+
+class ConversationResponse(BaseModel):
+    id: int
+    title: str | None
+    selected_model: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class AttachmentBody(BaseModel):
@@ -63,6 +71,88 @@ def _build_user_content(text: str, attachments: list[AttachmentBody]) -> list[di
                 }
             )
     return parts
+
+
+@router.get("/conversations")
+def get_conversations(
+    user_id: str = Depends(get_current_user_id),
+    session: Session = Depends(get_session),
+):
+    """Get all conversations for the current user that have at least one assistant response."""
+    uid = int(user_id)
+    conversations = session.exec(
+        select(Conversation)
+        .where(Conversation.user_id == uid)
+        .order_by(Conversation.updated_at.desc())
+    ).all()
+    
+    result = []
+    for c in conversations:
+        messages = session.exec(
+            select(Message)
+            .where(Message.conversation_id == c.id)
+        ).all()
+        
+        # Only include conversations that have both user and assistant messages
+        has_user = any(m.role == "user" for m in messages)
+        has_assistant = any(m.role == "assistant" for m in messages)
+        
+        if has_user and has_assistant:
+            result.append(
+                ConversationResponse(
+                    id=c.id,
+                    title=c.title or "بدون عنوان",
+                    selected_model=c.selected_model,
+                    created_at=c.created_at,
+                    updated_at=c.updated_at,
+                )
+            )
+    
+    return result
+
+
+@router.get("/conversations/{conversation_id}/messages")
+def get_conversation_messages(
+    conversation_id: int,
+    user_id: str = Depends(get_current_user_id),
+    session: Session = Depends(get_session),
+):
+    """Get all messages for a specific conversation."""
+    uid = int(user_id)
+    conversation = session.get(Conversation, conversation_id)
+    if not conversation or conversation.user_id != uid:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    messages = session.exec(
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.id)
+    ).all()
+    
+    # Check if conversation has both user and assistant messages
+    has_user = any(m.role == "user" for m in messages)
+    has_assistant = any(m.role == "assistant" for m in messages)
+    
+    if not (has_user and has_assistant):
+        raise HTTPException(status_code=404, detail="Conversation is incomplete")
+    
+    return {
+        "conversation": ConversationResponse(
+            id=conversation.id,
+            title=conversation.title or "بدون عنوان",
+            selected_model=conversation.selected_model,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+        ),
+        "messages": [
+            {
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+            }
+            for m in messages
+        ],
+    }
 
 
 @router.post("/stream-demo")
@@ -127,9 +217,23 @@ async def stream_demo(
         .where(Message.conversation_id == conversation.id)
         .order_by(Message.id)
     ).all()
-    summary = await summarize_short_term_memory(conversation=conversation, history=history)
-    if summary and summary != (conversation.memory_summary or ""):
-        save_conversation_summary(session, conversation, summary)
+    
+    # Get exchange rate and pricing in parallel (fast operations with cache)
+    # Use cached exchange rate and pricing instead of synchronous calls
+    usd_to_toman, pricing = await asyncio.gather(
+        get_usd_to_toman_rate(),
+        get_model_pricing(selected_model),
+        return_exceptions=True,
+    )
+    
+    # Handle potential errors
+    if isinstance(usd_to_toman, Exception):
+        usd_to_toman = float(settings.openrouter_usd_to_toman)
+    if isinstance(pricing, Exception):
+        pricing = await get_model_pricing(selected_model)
+    
+    # Use existing summary (don't re-compute it on every request)
+    summary = conversation.memory_summary or ""
 
     recent_history = history[-settings.short_term_max_messages :]
     openrouter_messages: list[dict] = []
@@ -151,8 +255,6 @@ async def stream_demo(
         openrouter_messages.append({"role": msg.role, "content": msg.content})
     openrouter_messages.append({"role": "user", "content": user_content_parts})
 
-    pricing = await get_model_pricing(selected_model)
-    usd_to_toman = await get_usd_to_toman_rate()
     estimated_input_tokens = estimate_input_tokens_from_messages(openrouter_messages)
     estimated_output_tokens = settings.openrouter_default_max_output_tokens
     estimated_cost_toman = estimate_cost_toman(
@@ -236,6 +338,10 @@ async def stream_demo(
             run_long_term_memory_task,
             user_id=uid,
             new_user_text=text,
+        )
+        background_tasks.add_task(
+            run_short_term_memory_task,
+            conversation_id=conversation.id,
         )
         yield b"data: [DONE]\n\n"
 

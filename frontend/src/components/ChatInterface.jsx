@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Chat, { Bubble } from '@chatui/core';
 import MessageRenderer from './MessageRenderer';
+import './ChatInterface.css';
 
 const MODEL_OPTIONS = [
   { value: 'openai/gpt-4o-mini', label: 'GPT-4o mini' },
@@ -17,7 +19,35 @@ export default function ChatInterface({
   pendingAttachments,
   onPickFiles,
   onRemoveAttachment,
+  onNewChat,
+  language = 'fa',
 }) {
+  const [showModelSelector, setShowModelSelector] = useState(false);
+
+  const text = {
+    fa: {
+      selectModel: 'انتخاب مدل',
+      locked: 'مدل قفل شده',
+      attachFiles: 'افزودن فایل',
+      removeFile: 'حذف',
+      newChat: 'گفتگوی جدید',
+      placeholder: 'پیام خود را بنویسید…',
+      assistant: 'دستیار لقمه',
+    },
+    en: {
+      selectModel: 'Select Model',
+      locked: 'Model Locked',
+      attachFiles: 'Add Files',
+      removeFile: 'Remove',
+      newChat: 'New Chat',
+      placeholder: 'Type your message…',
+      assistant: 'Loghme Assistant',
+    },
+  };
+
+  const t = text[language];
+  const isRtl = language === 'fa';
+
   function renderMessageContent(msg) {
     const text = msg.content?.text ?? '';
     if (msg.position === 'right') {
@@ -31,73 +61,92 @@ export default function ChatInterface({
   }
 
   return (
-    <div
-      className="chat-interface-wrap"
-      style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 12px',
-          borderBottom: '1px solid #3c4043',
-          background: '#1e1f20',
-          color: '#e3e3e3',
-        }}
-      >
-        <label htmlFor="model-select">Model:</label>
-        <select
-          id="model-select"
-          value={selectedModel}
-          onChange={(e) => onModelChange(e.target.value)}
-          disabled={isModelLocked}
-          style={{ background: '#131314', color: '#e3e3e3', borderRadius: 6, padding: '4px 8px' }}
-        >
-          {MODEL_OPTIONS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        {isModelLocked && <span style={{ fontSize: 12, color: '#9aa0a6' }}>مدل برای این گفتگو قفل شد</span>}
-        <label
-          htmlFor="chat-files"
-          style={{ cursor: 'pointer', marginInlineStart: 8, color: '#8ab4f8' }}
-        >
-          + فایل/عکس
-        </label>
-        <input id="chat-files" type="file" multiple onChange={onPickFiles} style={{ display: 'none' }} />
-      </div>
-      {pendingAttachments.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 12px', background: '#131314' }}>
-          {pendingAttachments.map((att, i) => (
+    <div className={`chat-interface-wrap ${isRtl ? 'rtl' : 'ltr'}`}>
+      {/* Toolbar */}
+      <div className="chat-interface__toolbar">
+        <div className="chat-interface__toolbar-left">
+          <button
+            className="chat-interface__new-chat-btn"
+            onClick={onNewChat}
+            title={t.newChat}
+          >
+            ✎ {t.newChat}
+          </button>
+        </div>
+
+        <div className="chat-interface__toolbar-right">
+          <div className="chat-interface__model-selector">
             <button
-              key={`${att.name}-${i}`}
-              type="button"
-              onClick={() => onRemoveAttachment(i)}
-              style={{
-                border: '1px solid #3c4043',
-                background: '#1e1f20',
-                color: '#e3e3e3',
-                borderRadius: 999,
-                padding: '4px 10px',
-                cursor: 'pointer',
-              }}
-              title="حذف فایل"
+              className="chat-interface__model-btn"
+              onClick={() => setShowModelSelector(!showModelSelector)}
+              disabled={isModelLocked}
+              title={isModelLocked ? t.locked : t.selectModel}
             >
-              {att.name} ×
+              {MODEL_OPTIONS.find((m) => m.value === selectedModel)?.label || 'Model'}
+              {isModelLocked && <span className="chat-interface__lock-icon">🔒</span>}
             </button>
+
+            {showModelSelector && !isModelLocked && (
+              <div className="chat-interface__model-dropdown">
+                {MODEL_OPTIONS.map((m) => (
+                  <button
+                    key={m.value}
+                    className={`chat-interface__model-option ${
+                      selectedModel === m.value ? 'active' : ''
+                    }`}
+                    onClick={() => {
+                      onModelChange(m.value);
+                      setShowModelSelector(false);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <label className="chat-interface__file-label" title={t.attachFiles}>
+            📎
+            <input
+              id="chat-files"
+              type="file"
+              multiple
+              onChange={onPickFiles}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Pending Attachments */}
+      {pendingAttachments.length > 0 && (
+        <div className="chat-interface__attachments">
+          {pendingAttachments.map((att, i) => (
+            <div key={`${att.name}-${i}`} className="chat-interface__attachment-item">
+              <span className="chat-interface__attachment-name">{att.name}</span>
+              <button
+                type="button"
+                className="chat-interface__attachment-remove"
+                onClick={() => onRemoveAttachment(i)}
+                title={t.removeFile}
+              >
+                ✕
+              </button>
+            </div>
           ))}
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+
+      {/* Chat Container */}
+      <div className="chat-interface__content">
         <Chat
-          navbar={{ title: 'دستیار لقمـه' }}
+          navbar={false}
           messages={messages}
           renderMessageContent={renderMessageContent}
           onSend={onSend}
-          placeholder="پیام خود را بنویسید…"
+          placeholder={t.placeholder}
+          actions={[]}
         />
       </div>
     </div>

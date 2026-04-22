@@ -1,13 +1,40 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '../../context/UserContext';
+import api from '../../services/api';
 import './Sidebar.css';
 
-export default function Sidebar({ onNewChat }) {
+export default function Sidebar({ onNewChat, onSelectConversation, refreshTrigger }) {
   const navigate = useNavigate();
   const { balance, logout, requestTopup } = useUser();
   const [topupAmount, setTopupAmount] = useState(30000);
   const [topupError, setTopupError] = useState('');
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const prevRefreshRef = useRef(refreshTrigger);
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    if (refreshTrigger !== prevRefreshRef.current) {
+      prevRefreshRef.current = refreshTrigger;
+      fetchConversations();
+    }
+  }, [refreshTrigger]);
+
+  const fetchConversations = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/chat/conversations');
+      setConversations(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTopup = async () => {
     setTopupError('');
@@ -21,6 +48,10 @@ export default function Sidebar({ onNewChat }) {
     }
   };
 
+  const handleSelectConversation = (conversation) => {
+    onSelectConversation(conversation.id);
+  };
+
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar__brand">Loghme</div>
@@ -29,7 +60,23 @@ export default function Sidebar({ onNewChat }) {
       </button>
       <div className="app-sidebar__section-title">گفتگوهای اخیر</div>
       <ul className="app-sidebar__list">
-        <li className="app-sidebar__placeholder">هنوز گفتگویی ذخیره نشده</li>
+        {loading ? (
+          <li className="app-sidebar__placeholder">در حال بارگذاری...</li>
+        ) : conversations.length === 0 ? (
+          <li className="app-sidebar__placeholder">هنوز گفتگویی ذخیره نشده</li>
+        ) : (
+          conversations.map((conv) => (
+            <li
+              key={conv.id}
+              className="app-sidebar__item"
+              onClick={() => handleSelectConversation(conv)}
+            >
+              <button type="button" className="app-sidebar__item-btn">
+                {conv.title}
+              </button>
+            </li>
+          ))
+        )}
       </ul>
       <div className="app-sidebar__footer">
         {balance != null && (

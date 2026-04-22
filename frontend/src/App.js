@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { UserProvider } from './context/UserContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
 import './App.css';
@@ -12,21 +13,23 @@ function PrivateRoute({ children }) {
 
 export default function App() {
   return (
-    <UserProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/chat"
-            element={
-              <PrivateRoute>
-                <ChatPage />
-              </PrivateRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/chat" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </UserProvider>
+    <LanguageProvider>
+      <UserProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/chat"
+              element={
+                <PrivateRoute>
+                  <ChatPage />
+                </PrivateRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </UserProvider>
+    </LanguageProvider>
   );
 }

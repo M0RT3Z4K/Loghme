@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMessages } from '@chatui/core';
 import { readChatSSE } from '../services/chatStream';
+import api from '../services/api';
 
 /**
  * مدیریت پیام‌ها و استریم پاسخ (الان به /api/chat/stream-demo وصل است).
@@ -12,6 +13,7 @@ export function useChat(options = {}) {
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini');
   const [isModelLocked, setIsModelLocked] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   onDoneRef.current = options.onAssistantDone;
 
   const fileToDataUrl = (file) =>
@@ -29,6 +31,31 @@ export function useChat(options = {}) {
       reader.onerror = reject;
       reader.readAsText(file);
     });
+
+  const loadConversation = useCallback(
+    async (conversationId) => {
+      try {
+        const response = await api.get(`/api/chat/conversations/${conversationId}/messages`);
+        const { conversation, messages: loadedMessages } = response.data;
+        
+        conversationIdRef.current = conversation.id;
+        setSelectedModel(conversation.selected_model);
+        setIsModelLocked(true);
+        
+        resetList(
+          loadedMessages.map((msg) => ({
+            type: 'text',
+            content: { text: msg.content },
+            position: msg.role === 'user' ? 'right' : 'left',
+          }))
+        );
+        setPendingAttachments([]);
+      } catch (error) {
+        console.error('Failed to load conversation:', error);
+      }
+    },
+    [resetList]
+  );
 
   const addAttachments = useCallback(async (fileList) => {
     const files = Array.from(fileList || []);
@@ -100,8 +127,12 @@ export function useChat(options = {}) {
             try {
               const j = JSON.parse(payload);
               if (j.conversation_id != null) {
+                const isNewConversation = conversationIdRef.current !== j.conversation_id;
                 conversationIdRef.current = j.conversation_id;
                 setIsModelLocked(true);
+                if (isNewConversation) {
+                  setRefreshTrigger(prev => prev + 1);
+                }
               }
               if (j.error) {
                 acc += `\n[OpenRouter error] ${j.error}`;
@@ -148,5 +179,7 @@ export function useChat(options = {}) {
     pendingAttachments,
     addAttachments,
     removeAttachment,
+    loadConversation,
+    refreshTrigger,
   };
 }

@@ -74,6 +74,37 @@ def run_long_term_memory_task(*, user_id: int, new_user_text: str) -> None:
     asyncio.run(update_long_term_memory_in_background(user_id=user_id, new_user_text=new_user_text))
 
 
+async def update_short_term_memory_in_background(
+    *, conversation_id: int
+) -> None:
+    """
+    Summarize conversation history in the background.
+    Runs after the response is sent, doesn't block the user.
+    """
+    with Session(engine) as session:
+        conversation = session.get(Conversation, conversation_id)
+        if not conversation:
+            return
+        
+        history = session.exec(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.id)
+        ).all()
+        
+        if len(history) <= settings.short_term_max_messages:
+            return
+        
+        summary = await summarize_short_term_memory(conversation=conversation, history=history)
+        if summary and summary != (conversation.memory_summary or ""):
+            save_conversation_summary(session, conversation, summary)
+
+
+def run_short_term_memory_task(*, conversation_id: int) -> None:
+    """Sync wrapper for FastAPI BackgroundTasks."""
+    asyncio.run(update_short_term_memory_in_background(conversation_id=conversation_id))
+
+
 def save_conversation_summary(session: Session, conversation: Conversation, summary: str) -> None:
     conversation.memory_summary = summary
     conversation.updated_at = datetime.utcnow()
