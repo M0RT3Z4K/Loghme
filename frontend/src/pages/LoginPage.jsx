@@ -33,9 +33,7 @@ export default function LoginPage() {
       await login(phone, password);
       await fetchBalance();
       navigate('/chat', { replace: true });
-    } catch {
-      /* خطا در useAuth */
-    }
+    } catch { /* handled by useAuth */ }
   };
 
   const handleLogin = async (e) => {
@@ -45,38 +43,31 @@ export default function LoginPage() {
       await login(phone, password);
       await fetchBalance();
       navigate('/chat', { replace: true });
-    } catch {
-      /* خطا در useAuth */
-    }
+    } catch { /* handled by useAuth */ }
+  };
+
+  const switchMode = (m) => {
+    setMode(m);
+    clearError();
+    setOtpSent(false);
+    setMockHint(null);
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page" dir="rtl">
       <div className="login-card">
-        <h1 className="login-title">لقمـه</h1>
+        {/* Logo */}
+        <div className="login-logo">
+          <div className="login-logo-mark">ل</div>
+          <span className="login-logo-text">لقمه</span>
+        </div>
+
+        {/* Tabs */}
         <div className="login-tabs">
-          <button
-            type="button"
-            className={mode === 'login' ? 'active' : ''}
-            onClick={() => {
-              setMode('login');
-              clearError();
-              setOtpSent(false);
-              setMockHint(null);
-            }}
-          >
+          <button className={`login-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => switchMode('login')}>
             ورود
           </button>
-          <button
-            type="button"
-            className={mode === 'register' ? 'active' : ''}
-            onClick={() => {
-              setMode('register');
-              clearError();
-              setOtpSent(false);
-              setMockHint(null);
-            }}
-          >
+          <button className={`login-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => switchMode('register')}>
             ثبت‌نام
           </button>
         </div>
@@ -85,83 +76,83 @@ export default function LoginPage() {
 
         {mode === 'login' ? (
           <form onSubmit={handleLogin} className="login-form">
-            <label>
-              موبایل
+            <div className="login-field">
+              <label>شماره موبایل</label>
               <input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value)}
                 placeholder="09123456789"
                 autoComplete="tel"
+                dir="ltr"
                 required
               />
-            </label>
-            <label>
-              رمز عبور
+            </div>
+            <div className="login-field">
+              <label>رمز عبور</label>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 autoComplete="current-password"
+                dir="ltr"
                 required
               />
-            </label>
-            <button type="submit" disabled={loading}>
-              {loading ? '…' : 'ورود'}
+            </div>
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? '···' : 'ورود به حساب'}
             </button>
           </form>
         ) : (
-          <form
-            className="login-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (otpSent) handleRegister();
-            }}
-          >
-            <label>
-              موبایل
+          <form className="login-form" onSubmit={e => { e.preventDefault(); if (otpSent) handleRegister(); }}>
+            <div className="login-field">
+              <label>شماره موبایل</label>
               <input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value)}
                 placeholder="09123456789"
                 autoComplete="tel"
+                dir="ltr"
                 required
               />
-            </label>
+            </div>
+
             {!otpSent ? (
-              <button type="button" className="secondary" onClick={handleSendOtp} disabled={loading || !phone}>
-                {loading ? '…' : 'ارسال کد تأیید'}
+              <button type="button" className="login-btn-secondary" onClick={handleSendOtp} disabled={loading || !phone}>
+                {loading ? '···' : 'ارسال کد تأیید'}
               </button>
             ) : (
               <>
                 {mockHint != null && (
-                  <div className="login-hint">کد آزمایشی (فقط dev): {mockHint}</div>
+                  <div className="login-hint">کد آزمایشی: <strong>{mockHint}</strong></div>
                 )}
-                <label>
-                  کد تأیید
+                <div className="login-field">
+                  <label>کد تأیید</label>
                   <input
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={e => setOtp(e.target.value)}
                     inputMode="numeric"
                     autoComplete="one-time-code"
+                    dir="ltr"
                     required
                   />
-                </label>
-                <label>
-                  نام (اختیاری)
-                  <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                </label>
-                <label>
-                  رمز عبور
+                </div>
+                <div className="login-field">
+                  <label>نام (اختیاری)</label>
+                  <input value={fullName} onChange={e => setFullName(e.target.value)} />
+                </div>
+                <div className="login-field">
+                  <label>رمز عبور</label>
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={e => setPassword(e.target.value)}
                     autoComplete="new-password"
+                    dir="ltr"
                     required
                   />
-                </label>
-                <button type="submit" disabled={loading}>
-                  {loading ? '…' : 'ثبت‌نام'}
+                </div>
+                <button type="submit" className="login-btn" disabled={loading}>
+                  {loading ? '···' : 'ثبت‌نام'}
                 </button>
               </>
             )}

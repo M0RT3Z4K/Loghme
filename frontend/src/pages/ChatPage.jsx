@@ -1,87 +1,91 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ChatInterface from '../components/ChatInterface';
-import Header from '../components/Header/Header';
-import ConversationDrawer from '../components/ConversationDrawer/ConversationDrawer';
+import { useEffect, useState, useCallback } from 'react';
+import Sidebar from '../components/Sidebar/Sidebar';
+import TopBar from '../components/TopBar/TopBar';
+import ChatArea from '../components/ChatArea/ChatArea';
 import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useChat } from '../hooks/useChat';
 import './ChatPage.css';
 
 export default function ChatPage() {
-  const navigate = useNavigate();
-  const { balance, fetchBalance, logout } = useUser();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'fa');
+  const { fetchBalance } = useUser();
+  const { language, setLanguage } = useLanguage();
+  const isRtl = language === 'fa';
+
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => window.innerWidth > 900
+  );
+  const [activeConvId, setActiveConvId] = useState(null);
 
   const {
-    messages,
-    onSend,
-    resetList,
-    selectedModel,
-    setSelectedModel,
-    isModelLocked,
-    pendingAttachments,
-    addAttachments,
-    removeAttachment,
-    loadConversation,
-    refreshTrigger,
+    messages, onSend, resetList,
+    selectedModel, setSelectedModel, isModelLocked,
+    pendingAttachments, addAttachments, removeAttachment,
+    loadConversation, refreshTrigger,
   } = useChat({ onAssistantDone: fetchBalance });
 
-  useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
   useEffect(() => {
-    localStorage.setItem('language', language);
-    document.documentElement.dir = language === 'fa' ? 'rtl' : 'ltr';
-    document.documentElement.lang = language;
-  }, [language]);
+    const handler = () => setSidebarOpen(window.innerWidth > 900);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
-  const handleNewChat = () => {
-    resetList([]);
-    setIsDrawerOpen(false);
-  };
+  const handleNewChat = useCallback(() => {
+    resetList();
+    setActiveConvId(null);
+    if (window.innerWidth <= 900) setSidebarOpen(false);
+  }, [resetList]);
 
-  const handleSelectConversation = (conversationId) => {
-    loadConversation(conversationId);
-  };
+  const handleSelectConversation = useCallback((convId) => {
+    setActiveConvId(convId);
+    loadConversation(convId);
+    if (window.innerWidth <= 900) setSidebarOpen(false);
+  }, [loadConversation]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handlePickFiles = async (e) => {
+    await addAttachments(e.target.files);
+    e.target.value = '';
   };
 
   return (
-    <div className={`chat-page ${language === 'fa' ? 'rtl' : 'ltr'}`}>
-      <Header
-        balance={balance}
-        onToggleSidebar={() => setIsDrawerOpen(!isDrawerOpen)}
-        language={language}
-        onLanguageChange={setLanguage}
-        onLogout={handleLogout}
+    <div className="chat-page" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className={`chat-page__sidebar ${sidebarOpen ? '' : 'hidden'}`}>
+        <Sidebar
+          onNewChat={handleNewChat}
+          onSelectConversation={handleSelectConversation}
+          refreshTrigger={refreshTrigger}
+          activeConversationId={activeConvId}
+          language={language}
+          onOpenSettings={() => {}}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
+
+      <div
+        className={`chat-page__overlay ${sidebarOpen ? 'visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
       />
-      <ConversationDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        onSelectConversation={handleSelectConversation}
-        refreshTrigger={refreshTrigger}
-        language={language}
-      />
-      <ChatInterface
-        messages={messages}
-        onSend={onSend}
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
-        isModelLocked={isModelLocked}
-        pendingAttachments={pendingAttachments}
-        onPickFiles={async (e) => {
-          await addAttachments(e.target.files);
-          e.target.value = '';
-        }}
-        onRemoveAttachment={removeAttachment}
-        onNewChat={handleNewChat}
-        language={language}
-      />
+
+      <div className="chat-page__main">
+        <TopBar
+          onToggleSidebar={() => setSidebarOpen(s => !s)}
+          language={language}
+          onLanguageChange={setLanguage}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          isModelLocked={isModelLocked}
+        />
+        <ChatArea
+          messages={messages}
+          onSend={onSend}
+          language={language}
+          pendingAttachments={pendingAttachments}
+          onPickFiles={handlePickFiles}
+          onRemoveAttachment={removeAttachment}
+        />
+      </div>
     </div>
   );
 }

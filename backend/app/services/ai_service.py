@@ -27,9 +27,9 @@ class ModelPricing:
 
 
 _pricing_cache: dict[str, tuple[float, ModelPricing]] = {}
-_PRICING_TTL_SECONDS = 600
+_PRICING_TTL_SECONDS = 86400  # 24 hours
 _usd_toman_cache: tuple[float, float] | None = None
-_USD_RATE_TTL_SECONDS = 120
+_USD_RATE_TTL_SECONDS = 1800  # 30 minutes
 
 
 def _parse_float(value: object) -> float:

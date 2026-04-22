@@ -1,26 +1,4 @@
-* {
-  box-sizing: border-box;
-}
+@import './styles/tokens.css';
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #0d0d0d;
-  color: #e0e0e0;
-}
-
-html[dir='rtl'] {
-  direction: rtl;
-}
-
-html[dir='ltr'] {
-  direction: ltr;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }

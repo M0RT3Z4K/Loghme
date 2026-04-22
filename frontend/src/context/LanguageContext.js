@@ -3,7 +3,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'fa');
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem('language') || 'fa'
+  );
 
   useEffect(() => {
     localStorage.setItem('language', language);
@@ -19,9 +21,7 @@ export function LanguageProvider({ children }) {
 }
 
 export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within LanguageProvider');
-  }
-  return context;
+  const ctx = useContext(LanguageContext);
+  if (!ctx) throw new Error('useLanguage must be used within LanguageProvider');
+  return ctx;
 }

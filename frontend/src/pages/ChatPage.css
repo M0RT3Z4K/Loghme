@@ -1,16 +1,107 @@
+/* ══════════════════════════════════════
+   CHAT PAGE LAYOUT
+══════════════════════════════════════ */
 .chat-page {
   display: flex;
-  flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* dynamic viewport height for mobile */
   width: 100%;
   overflow: hidden;
-  background: #0d0d0d;
+  background: var(--bg-base);
 }
 
-.chat-page.rtl {
-  direction: rtl;
+/* ── Sidebar slot ── */
+.chat-page__sidebar {
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width var(--dur-mid) var(--ease),
+              min-width var(--dur-mid) var(--ease);
+  /* Desktop: inline, collapses by squeezing */
 }
 
-.chat-page.ltr {
-  direction: ltr;
+.chat-page__sidebar.hidden .sidebar {
+  width: 0;
+  min-width: 0;
+  border: none;
+}
+
+/* ── Main ── */
+.chat-page__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ── Overlay (mobile only) ── */
+.chat-page__overlay {
+  display: none;
+}
+
+/* ══════════════════════════════════════
+   TABLET  ≤ 900px
+══════════════════════════════════════ */
+@media (max-width: 900px) {
+  /* Sidebar becomes a drawer over content */
+  .chat-page__sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 200;
+    height: 100%;
+    height: 100dvh;
+    transition: transform var(--dur-mid) var(--ease);
+  }
+
+  /* When open: slide in */
+  .chat-page__sidebar .sidebar {
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    border-inline-end: 1px solid var(--border-subtle) !important;
+  }
+
+  /* When hidden: slide out */
+  .chat-page__sidebar.hidden {
+    transform: translateX(-100%);
+  }
+
+  [dir='rtl'] .chat-page__sidebar.hidden {
+    transform: translateX(100%);
+  }
+
+  /* Main takes full width always */
+  .chat-page__main {
+    width: 100%;
+  }
+
+  /* Dim overlay when sidebar open */
+  .chat-page__overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-mid) var(--ease);
+    backdrop-filter: blur(1px);
+  }
+
+  .chat-page__overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+}
+
+/* ══════════════════════════════════════
+   MOBILE  ≤ 480px
+══════════════════════════════════════ */
+@media (max-width: 480px) {
+  .chat-page__sidebar .sidebar {
+    width: 100vw !important;
+    min-width: 100vw !important;
+  }
 }

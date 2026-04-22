@@ -1,0 +1,363 @@
+/* ══════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════ */
+.topbar {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+}
+
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Icon Button (hamburger) ── */
+.topbar__icon-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+.topbar__icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Model wrapper ── */
+.topbar__model-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+/* ── Model selector button ── */
+.topbar__model-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+}
+.topbar__model-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar__model-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.topbar__model-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.topbar__model-btn .lock { font-size: 11px; opacity: 0.6; flex-shrink: 0; }
+
+/* Model dropdown */
+.topbar__model-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  overflow: hidden;
+  min-width: 200px;
+  animation: dropdownIn var(--dur-fast) var(--ease);
+}
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.topbar__model-option {
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  transition: all var(--dur-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar__model-option:hover { background: var(--bg-hover); color: var(--text-primary); }
+.topbar__model-option.active { color: var(--accent-text); font-weight: 600; }
+.topbar__model-option .check { margin-inline-start: auto; font-size: 12px; color: var(--accent); }
+
+/* ── Theme & Lang buttons ── */
+.topbar__lang-btn,
+.topbar__theme-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+.topbar__lang-btn:hover,
+.topbar__theme-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* ── Wallet wrapper ── */
+.topbar__wallet-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ── Wallet pill ── */
+.topbar__wallet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(0,212,170,0.2);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  user-select: none;
+  white-space: nowrap;
+}
+.topbar__wallet:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.topbar__wallet:hover .topbar__wallet-icon,
+.topbar__wallet:hover .topbar__wallet-amount,
+.topbar__wallet:hover .topbar__wallet-currency {
+  color: var(--text-inverse);
+}
+.topbar__wallet-icon { font-size: 13px; }
+.topbar__wallet-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.topbar__wallet-currency {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Wallet dropdown ── */
+.topbar__wallet-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline-end: 0;
+  width: 260px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  z-index: 300;
+  animation: dropdownIn var(--dur-fast) var(--ease);
+}
+.topbar__wallet-dropdown h4 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.topbar__wallet-balance-display {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent-text);
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.topbar__wallet-balance-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+/* Topup section */
+.topbar__wallet-topup-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.topbar__wallet-topup-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.topbar__wallet-input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--border-default);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.topbar__wallet-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--input-focus);
+}
+.topbar__wallet-pay-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 9px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+}
+.topbar__wallet-pay-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-glow);
+}
+.topbar__wallet-pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.topbar__wallet-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 6px;
+  }
+
+  /* Hide currency label, keep amount */
+  .topbar__wallet-currency { display: none; }
+
+  /* Shrink model label */
+  .topbar__model-btn {
+    max-width: 130px;
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  /* Wallet dropdown: don't go off screen */
+  .topbar__wallet-dropdown {
+    width: min(260px, calc(100vw - 24px));
+    inset-inline-end: 0;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .topbar { padding: 0 10px; gap: 4px; height: 48px; min-height: 48px; }
+
+  /* Show model selector text on mobile but smaller and truncated */
+  .topbar__model-btn {
+    max-width: 80px;
+    min-width: 60px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    justify-content: flex-start;
+    font-size: 11px;
+  }
+  .topbar__model-btn span:not(.lock) {
+    display: block;
+  }
+  .topbar__model-btn svg { flex-shrink: 0; }
+
+  /* Wallet: show currency on mobile */
+  .topbar__wallet {
+    padding: 5px 9px;
+    gap: 5px;
+  }
+  .topbar__wallet-amount {
+    font-size: 12px;
+  }
+  .topbar__wallet-currency {
+    display: block !important;
+    font-size: 10px;
+  }
+
+  /* Lang button: smaller text */
+  .topbar__lang-btn { font-size: 11px; }
+
+  /* Wallet dropdown full-width on very small screens */
+  .topbar__wallet-dropdown {
+    position: fixed;
+    inset-inline-end: 8px;
+    inset-inline-start: 8px;
+    width: auto;
+    top: 56px;
+  }
+
+  /* Model dropdown: account for narrow screen */
+  .topbar__model-dropdown {
+    inset-inline-start: 0;
+    min-width: min(200px, calc(100vw - 20px));
+  }
+}
