@@ -32,6 +32,12 @@ export default function ChatPage() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  useEffect(() => {
+    if (activeConvId) {
+      loadConversation(activeConvId);
+    }
+  }, [activeConvId, loadConversation]);
+
   const handleNewChat = useCallback(() => {
     resetList();
     setActiveConvId(null);

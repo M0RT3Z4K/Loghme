@@ -212,6 +212,92 @@
 .sidebar__footer-btn:active { transform: scale(0.98); }
 .sidebar__footer-btn svg { flex-shrink: 0; }
 
+/* ── Delete Confirmation ── */
+.sidebar__confirm-delete {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: var(--shadow-elevated);
+  padding: 16px;
+  z-index: 100;
+  text-align: center;
+  opacity: 0;
+  animation: fadeIn 0.2s forwards, scaleUp 0.2s forwards;
+}
+
+.sidebar__confirm-delete p {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.sidebar__confirm-delete .confirm-btn {
+  background: var(--danger);
+  color: var(--text-inverse);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.sidebar__confirm-delete .confirm-btn:hover {
+  background: var(--danger-hover);
+}
+
+.sidebar__confirm-delete .cancel-btn {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.sidebar__confirm-delete .cancel-btn:hover {
+  background: var(--bg-hover);
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ── Delete Button ── */
+.sidebar__conv-delete {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.sidebar__conv-delete:hover {
+  background: var(--danger-dim);
+  color: var(--danger-hover);
+}
+.sidebar__conv-delete:active {
+  transform: scale(0.95);
+}
+
 /* ══════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════ */

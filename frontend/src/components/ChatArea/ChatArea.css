@@ -278,7 +278,7 @@
   color: var(--text-primary);
   font-family: inherit;
   font-size: 14.5px;
-  line-height: 1.55;
+  line-height: 1;
   resize: none;
   min-height: 24px;
   max-height: 160px;
@@ -396,4 +396,172 @@
   .chat-area__empty h2 { font-size: 16px; }
   .chat-area__empty p  { font-size: 13px; }
   .chat-area__empty-icon { width: 44px; height: 44px; font-size: 18px; }
+}
+
+/* ══════════════════════════════════════
+   COST BADGE
+══════════════════════════════════════ */
+
+/* bubble-wrap: bubble + cost badge در یک ستون */
+.chat-msg__bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: min(72%, 580px);
+}
+
+.chat-msg.user .chat-msg__bubble-wrap {
+  align-items: flex-end;
+}
+
+/* bubble دیگه max-width نداره — wrap مدیریت می‌کنه */
+.chat-msg__bubble-wrap .chat-msg__bubble {
+  max-width: 100%;
+}
+
+/* cost wrap: icon + tooltip */
+.chat-msg__cost-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chat-msg__cost-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  transition: color var(--dur-fast), background var(--dur-fast);
+  opacity: 0.55;
+}
+
+.chat-msg__cost-btn:hover,
+.chat-msg__cost-btn:focus-visible {
+  opacity: 1;
+  color: var(--accent-text);
+  background: var(--accent-dim);
+  outline: none;
+}
+
+/* tooltip */
+.chat-msg__cost-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  inset-inline-start: 0;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  animation: tooltipIn 0.15s var(--ease);
+  z-index: 10;
+}
+
+.chat-msg__cost-tooltip strong {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* mobile: tooltip بالاتر نره از صفحه */
+@media (max-width: 480px) {
+  .chat-msg__bubble-wrap {
+    max-width: 86%;
+  }
+  .chat-msg__cost-tooltip {
+    font-size: 11px;
+  }
+}
+
+/* actions row (cost + buttons) */
+.chat-msg__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* دکمه‌ها مثل sidebar__close-btn */
+.chat-msg__action-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 6px;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.chat-msg__action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chat-msg__action-btn:active {
+  transform: scale(0.95);
+}
+/* wrap برای share */
+.chat-msg__share-wrap {
+  position: relative;
+}
+
+/* popover */
+.chat-msg__share-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  inset-inline-start: 0;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 20;
+  min-width: 140px;
+  animation: fadeIn 0.15s var(--ease);
+}
+
+.chat-msg__share-item {
+  border: none;
+  background: transparent;
+  text-align: start;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all var(--dur-fast);
+}
+
+.chat-msg__share-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

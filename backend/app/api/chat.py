@@ -317,7 +317,7 @@ async def stream_demo(
         )
         if final_cost_toman <= 0:
             final_cost_toman = 0.0
-        user.wallet_balance = max(0.0, user.wallet_balance - final_cost_toman)
+        user.wallet_balance = user.wallet_balance - final_cost_toman
         assistant_msg.token_cost = final_cost_toman
         charge_tx = WalletTransaction(
             user_id=uid,
@@ -346,3 +346,27 @@ async def stream_demo(
         yield b"data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: int,
+    user_id: str = Depends(get_current_user_id),
+    session: Session = Depends(get_session),
+):
+    """Delete a specific conversation."""
+    uid = int(user_id)
+    conversation = session.get(Conversation, conversation_id)
+    if not conversation or conversation.user_id != uid:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Delete all messages associated with the conversation
+    session.exec(
+        select(Message).where(Message.conversation_id == conversation_id)
+    ).delete()
+
+    # Delete the conversation itself
+    session.delete(conversation)
+    session.commit()
+
+    return {"detail": "Conversation deleted successfully"}

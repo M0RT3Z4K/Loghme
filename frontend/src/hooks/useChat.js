@@ -22,14 +22,10 @@ export function useChat(options = {}) {
   }, []);
 
   const updateMsg = useCallback((id, updates) => {
-    setMessages(prev =>
-      prev.map(m => m._id === id ? { ...m, ...updates } : m)
-    );
+    setMessages(prev => prev.map(m => m._id === id ? { ...m, ...updates } : m));
   }, []);
 
-  const resetList = useCallback((initial = []) => {
-    setMessages(initial);
-  }, []);
+  const resetList = useCallback(() => setMessages([]), []);
 
   const fileToDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -47,50 +43,20 @@ export function useChat(options = {}) {
       r.readAsText(file);
     });
 
-  const compressImage = async (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 1024;
-          if (width > height && width > maxDim) {
-            height = (height * maxDim) / width;
-            width = maxDim;
-          } else if (height > maxDim) {
-            width = (width * maxDim) / height;
-            height = maxDim;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL(file.type, 0.8));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const loadConversation = useCallback(async (conversationId) => {
     try {
       const response = await api.get(`/api/chat/conversations/${conversationId}/messages`);
       const { conversation, messages: loaded } = response.data;
-
       conversationIdRef.current = conversation.id;
       setSelectedModel(conversation.selected_model);
       setIsModelLocked(true);
-
       setMessages(
         loaded.map((msg) => ({
           _id: uid(),
           type: 'text',
-          content: { text: msg.content },
+          content: { text: (msg.content || '').trim() }, // Normalize and trim text
           position: msg.role === 'user' ? 'right' : 'left',
+          token_cost: msg.role === 'assistant' ? (msg.token_cost ?? null) : null,
         }))
       );
       setPendingAttachments([]);
@@ -112,14 +78,9 @@ export function useChat(options = {}) {
           /\.(txt|md|json|js|ts|jsx|tsx|py|java|c|cpp|go|rs|html|css|sql|yml|yaml|csv)$/i.test(file.name);
         let dataUrl = null;
         let textContent = null;
-        // Compress images on selection (not on send)
-        if (isImage) {
-          dataUrl = await compressImage(file);
-        } else if (isTextLike) {
-          textContent = (await fileToText(file)).slice(0, 20000);
-        } else {
-          dataUrl = await fileToDataUrl(file);
-        }
+        if (isImage) dataUrl = await fileToDataUrl(file);
+        if (isTextLike) textContent = (await fileToText(file)).slice(0, 20000);
+        if (!isImage && !isTextLike) dataUrl = await fileToDataUrl(file);
         return { name: file.name, mime_type: mimeType, data_url: dataUrl, text_content: textContent };
       })
     );
@@ -130,76 +91,94 @@ export function useChat(options = {}) {
     setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  const onSend = useCallback(
-    async (type, val) => {
-      if (type !== 'text' || !val.trim()) return;
+  const onSend = useCallback(async (type, val) => {
+    if (type !== 'text' || !val.trim()) return;
 
-      const userText =
-        pendingAttachments.length > 0
-          ? `${val.trim()}\n\n📎 ${pendingAttachments.map(a => a.name).join(', ')}`
-          : val.trim();
+    const userText = pendingAttachments.length > 0
+      ? `${val.trim()}\n\n📎 ${pendingAttachments.map(a => a.name).join(', ')}`
+      : val.trim();
 
-      appendMsg({
-        type: 'text',
-        content: { text: userText },
-        position: 'right',
-      });
+    appendMsg({ type: 'text', content: { text: userText }, position: 'right', token_cost: null });
+    const assistantId = appendMsg({
+      type: 'text', content: { text: '' }, position: 'left', token_cost: null,
+    });
 
-      const assistantId = appendMsg({
-        type: 'text',
-        content: { text: '' },
-        position: 'left',
-      });
+    const token = localStorage.getItem('access_token');
+    const accRef   = { value: '' };   // متن جمع‌شده
+    const costRef  = { value: null }; // هزینه از SSE (اگه بک‌اند بفرسته)
 
-      const token = localStorage.getItem('access_token');
-      let acc = '';
+    // موجودی قبل از ارسال
+    let balanceBefore = null;
+    try {
+      const { data } = await api.get('/api/wallet/balance');
+      balanceBefore = data.wallet_balance;
+    } catch { /* اگه نشد مشکلی نیست */ }
 
-      try {
-        await readChatSSE('/api/chat/stream-demo', {
-          token,
-          body: {
-            text: val.trim(),
-            conversation_id: conversationIdRef.current,
-            model: selectedModel,
-            attachments: pendingAttachments,
-          },
-          onDataLine: (payload) => {
-            try {
-              const j = JSON.parse(payload);
-              if (j.conversation_id != null) {
-                const isNew = conversationIdRef.current !== j.conversation_id;
-                conversationIdRef.current = j.conversation_id;
-                setIsModelLocked(true);
-              }
-              if (j.error) acc += `\n[خطا] ${j.error}`;
-              if (j.chunk != null) acc += j.chunk;
-            } catch {
-              acc += payload;
+    try {
+      await readChatSSE('/api/chat/stream-demo', {
+        token,
+        body: {
+          text: val.trim(),
+          conversation_id: conversationIdRef.current,
+          model: selectedModel,
+          attachments: pendingAttachments,
+        },
+        onDataLine: (payload) => {
+          try {
+            const j = JSON.parse(payload);
+            if (j.conversation_id != null) {
+              const isNew = conversationIdRef.current !== j.conversation_id;
+              conversationIdRef.current = j.conversation_id;
+              setIsModelLocked(true);
+              if (isNew) setRefreshTrigger(prev => prev + 1);
             }
-            updateMsg(assistantId, {
-              type: 'text',
-              content: { text: acc },
-              position: 'left',
-            });
-          },
-        });
-        // Refresh conversation list only after assistant response is complete
-        if (acc.trim() && !acc.includes('[خطا]')) {
-          setRefreshTrigger(prev => prev + 1);
-        }
-      } catch (err) {
-        updateMsg(assistantId, {
-          type: 'text',
-          content: { text: `⚠️ خطا در دریافت پاسخ. ${err?.message || ''}`.trim() },
-          position: 'left',
-        });
-      }
-
+            // روش ۱: بک‌اند مستقیم token_cost فرستاده
+            if (j.token_cost != null) costRef.value = j.token_cost;
+            if (j.error) accRef.value += `\n⚠️ ${j.error}`;
+            if (j.chunk != null) accRef.value += j.chunk;
+          } catch {
+            accRef.value += payload;
+          }
+          updateMsg(assistantId, {
+            type: 'text',
+            content: { text: accRef.value },
+            position: 'left',
+            token_cost: null,
+          });
+        },
+      });
+    } catch (err) {
+      updateMsg(assistantId, {
+        type: 'text',
+        content: { text: `⚠️ خطا در دریافت پاسخ. ${err?.message || ''}`.trim() },
+        position: 'left',
+        token_cost: null,
+      });
       setPendingAttachments([]);
-      onDoneRef.current?.();
-    },
-    [appendMsg, pendingAttachments, selectedModel, updateMsg]
-  );
+      return;
+    }
+
+    // روش ۲: اگه بک‌اند token_cost نفرستاد، از تفاضل موجودی حساب کن
+    if (costRef.value == null && balanceBefore != null) {
+      try {
+        const { data } = await api.get('/api/wallet/balance');
+        const balanceAfter = data.wallet_balance;
+        const diff = balanceBefore - balanceAfter;
+        if (diff > 0) costRef.value = diff;
+      } catch { /* اگه نشد نشون نده */ }
+    }
+
+    // cost رو set کن — حتماً بعد از stream
+    updateMsg(assistantId, {
+      type: 'text',
+      content: { text: accRef.value },
+      position: 'left',
+      token_cost: costRef.value,
+    });
+
+    setPendingAttachments([]);
+    onDoneRef.current?.();
+  }, [appendMsg, pendingAttachments, selectedModel, updateMsg]);
 
   const resetChat = useCallback(() => {
     conversationIdRef.current = null;
@@ -209,16 +188,9 @@ export function useChat(options = {}) {
   }, []);
 
   return {
-    messages,
-    onSend,
-    resetList: resetChat,
-    selectedModel,
-    setSelectedModel,
-    isModelLocked,
-    pendingAttachments,
-    addAttachments,
-    removeAttachment,
-    loadConversation,
-    refreshTrigger,
+    messages, onSend, resetList: resetChat,
+    selectedModel, setSelectedModel, isModelLocked,
+    pendingAttachments, addAttachments, removeAttachment,
+    loadConversation, refreshTrigger,
   };
 }

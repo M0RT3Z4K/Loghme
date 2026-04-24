@@ -110,7 +110,7 @@ def estimate_cost_toman(
     usd = (pricing.prompt_usd_per_token * input_tokens) + (
         pricing.completion_usd_per_token * output_tokens
     )
-    return usd * float(usd_to_toman)
+    return usd * float(usd_to_toman) * 1.6
 
 
 async def stream_chat_completion(

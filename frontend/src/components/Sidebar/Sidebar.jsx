@@ -82,6 +82,7 @@ export default function Sidebar({
     }
   }, [refreshTrigger, fetchConversations]);
 
+  const [confirmDelete, setConfirmDelete] = useState(null); // State for managing confirmation
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
@@ -122,10 +123,44 @@ export default function Sidebar({
             <div
               key={conv.id}
               className={`sidebar__conv-item ${activeConversationId === conv.id ? 'active' : ''}`}
-              onClick={() => onSelectConversation(conv.id)}
             >
-              <span className="sidebar__conv-icon"><IconChat /></span>
-              <span className="sidebar__conv-title">{conv.title}</span>
+              <span className="sidebar__conv-icon" onClick={() => onSelectConversation(conv.id)}><IconChat /></span>
+              <span className="sidebar__conv-title" onClick={() => onSelectConversation(conv.id)}>{conv.title}</span>
+              <button
+                className="sidebar__conv-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(conv.id); // Show confirmation card
+                }}
+              >
+                ✕
+              </button>
+
+              {confirmDelete === conv.id && (
+                <div className="sidebar__confirm-delete">
+                  <p>آیا مطمئن هستید که می‌خواهید این گفتگو را حذف کنید؟</p>
+                  <button
+                    className="confirm-btn"
+                    onClick={async () => {
+                      try {
+                        await api.delete(`/api/chat/conversations/${conv.id}`);
+                        fetchConversations();
+                        setConfirmDelete(null); // Close confirmation card
+                      } catch (error) {
+                        console.error('Failed to delete conversation', error);
+                      }
+                    }}
+                  >
+                    بله
+                  </button>
+                  <button
+                    className="cancel-btn"
+                    onClick={() => setConfirmDelete(null)}
+                  >
+                    خیر
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}

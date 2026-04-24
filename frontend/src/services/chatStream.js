@@ -1,11 +1,11 @@
 const baseURL = () => process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 /**
- * خواندن استریم SSE از بک‌اند (خطوط data: ...)
- * @param {string} path - مثال: /api/chat/stream-demo
- * @param {{ token?: string, body?: any, onDataLine: (payload: string) => void, signal?: AbortSignal }} options
+ * خواندن SSE stream از بک‌اند
+ * onDataLine: (payload: string) => void
+ * onDone: () => void  — بعد از [DONE] صدا زده میشه
  */
-export async function readChatSSE(path, { token, body, onDataLine, signal }) {
+export async function readChatSSE(path, { token, body, onDataLine, onDone, signal }) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body != null) headers['Content-Type'] = 'application/json';
@@ -16,13 +16,10 @@ export async function readChatSSE(path, { token, body, onDataLine, signal }) {
     body: body != null ? JSON.stringify(body) : undefined,
     signal,
   });
+
   if (!res.ok) {
     let detail = '';
-    try {
-      detail = await res.text();
-    } catch {
-      detail = '';
-    }
+    try { detail = await res.text(); } catch { detail = ''; }
     throw new Error(`Stream failed: ${res.status}${detail ? ` - ${detail}` : ''}`);
   }
 
@@ -41,13 +38,19 @@ export async function readChatSSE(path, { token, body, onDataLine, signal }) {
     while ((sep = buffer.indexOf('\n\n')) >= 0) {
       const block = buffer.slice(0, sep);
       buffer = buffer.slice(sep + 2);
+
       for (const line of block.split('\n')) {
-        if (line.startsWith('data:')) {
-          const payload = line.slice(5).trim();
-          if (payload === '[DONE]') return;
-          onDataLine(payload);
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+
+        if (payload === '[DONE]') {
+          // اول onDone صدا بزن، بعد return کن
+          onDone?.();
+          return;
         }
+        onDataLine(payload);
       }
     }
   }
+  onDone?.();
 }
