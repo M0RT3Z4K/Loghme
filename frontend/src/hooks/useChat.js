@@ -54,7 +54,7 @@ export function useChat(options = {}) {
         loaded.map((msg) => ({
           _id: uid(),
           type: 'text',
-          content: { text: (msg.content || '').trim() }, // Normalize and trim text
+          content: { text: msg.content },
           position: msg.role === 'user' ? 'right' : 'left',
           token_cost: msg.role === 'assistant' ? (msg.token_cost ?? null) : null,
         }))
@@ -150,7 +150,7 @@ export function useChat(options = {}) {
     } catch (err) {
       updateMsg(assistantId, {
         type: 'text',
-        content: { text: `⚠️ خطا در دریافت پاسخ. ${err?.message || ''}`.trim() },
+        content: { text: `⚠️ خطا در دریافت پاسخ.\n ${err?.message || ''}`.trim() },
         position: 'left',
         token_cost: null,
       });
@@ -187,10 +187,22 @@ export function useChat(options = {}) {
     setPendingAttachments([]);
   }, []);
 
+  const refreshConversations = useCallback(async () => {
+    try {
+      const response = await api.get('/conversations'); // فرض می‌کنیم این مسیر لیست مکالمات را بازمی‌گرداند
+      if (response.status === 200) {
+        setRefreshTrigger(prev => prev + 1); // سیگنال برای به‌روزرسانی کامپوننت‌های دیگر
+      }
+    } catch (error) {
+      console.error('Failed to refresh conversations:', error);
+    }
+  }, []);
+
   return {
     messages, onSend, resetList: resetChat,
     selectedModel, setSelectedModel, isModelLocked,
     pendingAttachments, addAttachments, removeAttachment,
     loadConversation, refreshTrigger,
+    refreshConversations,
   };
 }

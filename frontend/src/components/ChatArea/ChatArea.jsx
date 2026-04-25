@@ -145,18 +145,15 @@ function MessageBubble({ msg, language }) {
           <div className="chat-msg__actions">
 
             {msg.token_cost != null && (
+              <>
               <CostBadge cost={msg.token_cost} language={language} />
-            )}
-
-            {/* COPY */}
-            <button
+              <button
               className="chat-msg__action-btn"
               onClick={handleCopy}
             >
               {copied ? <IconCheck /> : <IconCopy />}
             </button>
 
-            {/* SHARE */}
             <div className="chat-msg__share-wrap">
               <button
                 className="chat-msg__action-btn"
@@ -183,6 +180,10 @@ function MessageBubble({ msg, language }) {
               )}
             </div>
 
+
+              </>
+            )}
+            
           </div>
         )}
       </div>

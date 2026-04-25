@@ -6,12 +6,21 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.db.session import engine
+from app.db.session import engine, get_session
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.user import User
 from app.services.ai_service import chat_completion
+from fastapi import APIRouter, Depends, HTTPException
 
+router = APIRouter()
+
+# Endpoint to toggle long-term memory
+@router.post("/settings/long_term_memory")
+def toggle_long_term_memory(enabled: bool, session: Session = Depends(get_session)):
+    """Enable or disable long-term memory."""
+    settings.long_term_memory_enabled = enabled
+    return {"detail": f"Long-term memory {'enabled' if enabled else 'disabled'}"}
 
 async def summarize_short_term_memory(
     *,
@@ -38,6 +47,9 @@ async def update_long_term_memory_in_background(*, user_id: int, new_user_text: 
     Pull out stable user facts/preferences and merge them into a compact profile memory.
     Runs in the background so main chat response is not blocked.
     """
+    if not settings.long_term_memory_enabled:
+        return  # Skip if long-term memory is disabled
+
     with Session(engine) as session:
         user = session.get(User, user_id)
         if not user:

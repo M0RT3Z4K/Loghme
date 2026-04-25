@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     otp_ttl_seconds: int = 300
     otp_length: int = 6
     otp_mock_return: bool = Field(default=False, validation_alias="OTP_MOCK_RETURN")
+    long_term_memory_enabled: bool = False  # Set to True to enable long-term memory features:
 
 
 settings = Settings()

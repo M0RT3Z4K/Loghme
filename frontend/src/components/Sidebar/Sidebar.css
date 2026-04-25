@@ -113,7 +113,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 8px 8px;
-  /* Smooth momentum scroll on iOS */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -127,12 +126,38 @@
   transition: background var(--dur-fast) var(--ease);
   margin-bottom: 1px;
   min-width: 0;
-  /* Make tap targets bigger on mobile */
 }
 .sidebar__conv-item:hover { background: var(--bg-hover); }
 .sidebar__conv-item.active { background: var(--bg-elevated); }
-/* Tap highlight on mobile */
 .sidebar__conv-item:active { background: var(--bg-hover); }
+
+/* دکمه حذف — پیش‌فرض مخفیه */
+.sidebar__conv-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: all var(--dur-fast) var(--ease);
+}
+/* روی hover آیتم، دکمه ظاهر میشه */
+.sidebar__conv-item:hover .sidebar__conv-delete,
+.sidebar__conv-item.active .sidebar__conv-delete {
+  opacity: 1;
+}
+.sidebar__conv-delete:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+.sidebar__conv-delete:active { transform: scale(0.9); }
 
 .sidebar__conv-icon {
   font-size: 14px;
@@ -212,90 +237,119 @@
 .sidebar__footer-btn:active { transform: scale(0.98); }
 .sidebar__footer-btn svg { flex-shrink: 0; }
 
-/* ── Delete Confirmation ── */
-.sidebar__confirm-delete {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  box-shadow: var(--shadow-elevated);
-  padding: 16px;
-  z-index: 100;
-  text-align: center;
-  opacity: 0;
-  animation: fadeIn 0.2s forwards, scaleUp 0.2s forwards;
-}
-
-.sidebar__confirm-delete p {
-  margin-bottom: 12px;
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.confirm-actions {
+/* ══════════════════════════════════════
+   DELETE DIALOG
+══════════════════════════════════════ */
+.delete-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
+  padding: 20px;
+  animation: backdropIn var(--dur-fast) var(--ease);
+}
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.sidebar__confirm-delete .confirm-btn {
-  background: var(--danger);
-  color: var(--text-inverse);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
-}
-.sidebar__confirm-delete .confirm-btn:hover {
-  background: var(--danger-hover);
-}
-
-.sidebar__confirm-delete .cancel-btn {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+.delete-dialog__card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: cardIn var(--dur-mid) var(--ease);
 }
-.sidebar__confirm-delete .cancel-btn:hover {
-  background: var(--bg-hover);
-}
-
-@keyframes fadeIn {
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes scaleUp {
-  to {
-    transform: translate(-50%, -50%) scale(1);
-  }
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Delete Button ── */
-.sidebar__conv-delete {
-  background: transparent;
-  border: none;
-  color: var(--danger);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
-}
-.sidebar__conv-delete:hover {
+.delete-dialog__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   background: var(--danger-dim);
-  color: var(--danger-hover);
+  border: 1px solid rgba(255, 95, 95, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  margin-bottom: 4px;
 }
-.sidebar__conv-delete:active {
-  transform: scale(0.95);
+
+.delete-dialog__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.delete-dialog__body {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.7;
+  max-width: 290px;
+}
+.delete-dialog__body strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.delete-dialog__actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.delete-dialog__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+}
+.delete-dialog__btn:active { transform: scale(0.97); }
+
+.delete-dialog__btn--cancel {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+.delete-dialog__btn--cancel:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.delete-dialog__btn--confirm {
+  background: var(--danger);
+  color: #fff;
+}
+.delete-dialog__btn--confirm:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 14px rgba(255, 95, 95, 0.35);
 }
 
 /* ══════════════════════════════════════
@@ -303,8 +357,17 @@
 ══════════════════════════════════════ */
 @media (max-width: 480px) {
   .sidebar__logo { padding: 20px 16px 14px; }
-  .sidebar__conv-item { padding: 12px 10px; } /* bigger tap targets */
+  .sidebar__conv-item { padding: 12px 10px; }
+  /* روی موبایل دکمه حذف همیشه نمایان باشه */
+  .sidebar__conv-delete { opacity: 0.6; }
   .sidebar__footer-btn { padding: 13px 10px; }
   .sidebar__new-chat { padding: 12px 14px; font-size: 14px; }
   .sidebar__close-btn { display: flex; }
+
+  .delete-dialog__card {
+    padding: 24px 18px 20px;
+    border-radius: 16px;
+  }
+  .delete-dialog__actions { flex-direction: column-reverse; }
+  .delete-dialog__btn { flex: unset; width: 100%; padding: 13px; }
 }

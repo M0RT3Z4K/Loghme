@@ -6,8 +6,15 @@ import './TopBar.css';
 const MODEL_OPTIONS = [
   { value: 'openai/gpt-4o-mini',              label: 'GPT-4o mini' },
   { value: 'openai/gpt-4o',                   label: 'GPT-4o' },
-  { value: 'google/gemini-2.0-flash-001',     label: 'Gemini 2.0 Flash' },
-  { value: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet' },
+  { value: 'openai/gpt-5-chat',               label: 'GPT-5' },
+  { value: 'google/gemini-2.5-flash',     label: 'Gemini 2.5 Flash' },
+  { value: 'google/gemini-2.5-flash-lite',     label: 'Gemini 2.5 Flash Lite' },
+  { value: 'google/gemini-2.5-pro',           label: 'Gemini 2.5 Pro' },
+  { value: 'google/gemini-3-flash-preview',           label: 'Gemini 3 Flash' },
+  { value: 'google/gemini-3.1-flash-lite-preview',           label: 'Gemini 3 Flash Lite' },
+  { value: 'deepseek/deepseek-v3.2',         label: 'DeepSeek V3.2' },
+  { value: 'deepseek/deepseek-r1',         label: 'DeepSeek R1' },
+  { value: 'google/gemini-3.1-flash-image-preview',         label: 'Nano Banana' },
 ];
 
 const IconMenu = () => (

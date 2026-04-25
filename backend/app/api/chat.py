@@ -5,7 +5,7 @@ import asyncio
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 
 from app.api.wallet import get_current_user_id
 from app.core.config import settings
@@ -362,8 +362,8 @@ def delete_conversation(
 
     # Delete all messages associated with the conversation
     session.exec(
-        select(Message).where(Message.conversation_id == conversation_id)
-    ).delete()
+        delete(Message).where(Message.conversation_id == conversation_id)
+    )
 
     # Delete the conversation itself
     session.delete(conversation)
