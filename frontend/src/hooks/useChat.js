@@ -5,6 +5,13 @@ import api from '../services/api';
 let _msgCounter = 0;
 const uid = () => `msg-${++_msgCounter}`;
 
+// PDF text extraction (client-side, basic)
+async function extractPdfText(file) {
+  // We'll send as base64 and let backend handle it
+  // But also try to read text if it's text-based
+  return null;
+}
+
 export function useChat(options = {}) {
   const [messages, setMessages] = useState([]);
   const onDoneRef = useRef(options.onAssistantDone);
@@ -13,6 +20,7 @@ export function useChat(options = {}) {
   const [isModelLocked, setIsModelLocked] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   onDoneRef.current = options.onAssistantDone;
 
   const appendMsg = useCallback((msg) => {
@@ -31,6 +39,19 @@ export function useChat(options = {}) {
     new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const result = r.result;
+        // Strip the data:...;base64, prefix
+        const b64 = result.split(',')[1];
+        resolve(b64);
+      };
       r.onerror = reject;
       r.readAsDataURL(file);
     });
@@ -72,16 +93,36 @@ export function useChat(options = {}) {
       files.map(async (file) => {
         const mimeType = file.type || 'application/octet-stream';
         const isImage = mimeType.startsWith('image/');
+        const isPdf = mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
         const isTextLike =
-          mimeType.startsWith('text/') ||
-          /json|javascript|xml|csv|markdown|yaml/.test(mimeType) ||
-          /\.(txt|md|json|js|ts|jsx|tsx|py|java|c|cpp|go|rs|html|css|sql|yml|yaml|csv)$/i.test(file.name);
+          !isPdf && (
+            mimeType.startsWith('text/') ||
+            /json|javascript|xml|csv|markdown|yaml/.test(mimeType) ||
+            /\.(txt|md|json|js|ts|jsx|tsx|py|java|c|cpp|go|rs|html|css|sql|yml|yaml|csv)$/i.test(file.name)
+          );
+        
         let dataUrl = null;
         let textContent = null;
-        if (isImage) dataUrl = await fileToDataUrl(file);
-        if (isTextLike) textContent = (await fileToText(file)).slice(0, 20000);
-        if (!isImage && !isTextLike) dataUrl = await fileToDataUrl(file);
-        return { name: file.name, mime_type: mimeType, data_url: dataUrl, text_content: textContent };
+        let pdf_base64 = null;
+
+        if (isImage) {
+          dataUrl = await fileToDataUrl(file);
+        } else if (isPdf) {
+          // Send PDF as base64 to backend
+          pdf_base64 = await fileToBase64(file);
+        } else if (isTextLike) {
+          textContent = (await fileToText(file));
+        } else {
+          dataUrl = await fileToDataUrl(file);
+        }
+
+        return {
+          name: file.name,
+          mime_type: isPdf ? 'application/pdf' : mimeType,
+          data_url: dataUrl,
+          text_content: textContent,
+          pdf_base64,
+        };
       })
     );
     setPendingAttachments(prev => [...prev, ...built]);
@@ -91,12 +132,79 @@ export function useChat(options = {}) {
     setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  // Image generation with Nano Banana
+ const generateImage = useCallback(async (prompt) => {
+  setIsGeneratingImage(true);
+
+  const userMsgId = appendMsg({
+    type: 'text',
+    content: { text: `🍌 ${prompt}` },
+    position: 'right',
+    token_cost: null,
+  });
+
+  const assistantId = appendMsg({
+    type: 'image-loading',
+    content: { text: '' },
+    position: 'left',
+    token_cost: null,
+  });
+
+  try {
+    const { data } = await api.post('/api/image/generate-image', { prompt });
+
+    const images = data?.images || [];
+
+    if (images.length > 0 && images[0]?.url) {
+      updateMsg(assistantId, {
+        type: 'image',
+        content: {
+          imageUrl: images[0].url,
+          prompt: data.prompt || prompt,
+        },
+        position: 'left',
+        token_cost: data.cost_toman || null,
+      });
+    } else {
+      updateMsg(assistantId, {
+        type: 'text',
+        content: { text: '⚠️ هیچ تصویری از سرویس دریافت نشد.' },
+        position: 'left',
+        token_cost: null,
+      });
+    }
+
+    onDoneRef.current?.();
+  } catch (err) {
+    const msg =
+      err?.response?.data?.detail ||
+      err?.message ||
+      'خطا در ساخت تصویر';
+
+    updateMsg(assistantId, {
+      type: 'text',
+      content: { text: `⚠️ ${msg}` },
+      position: 'left',
+      token_cost: null,
+    });
+  } finally {
+    setIsGeneratingImage(false);
+  }
+}, [appendMsg, updateMsg]);
   const onSend = useCallback(async (type, val) => {
     if (type !== 'text' || !val.trim()) return;
 
+    // Detect image generation command: /image or /تصویر
+    const trimmed = val.trim();
+    const imageMatch = trimmed.match(/^\/(?:image|img|تصویر|عکس)\s+(.+)/i);
+    if (imageMatch) {
+      await generateImage(imageMatch[1].trim());
+      return;
+    }
+
     const userText = pendingAttachments.length > 0
-      ? `${val.trim()}\n\n📎 ${pendingAttachments.map(a => a.name).join(', ')}`
-      : val.trim();
+      ? `${trimmed}\n\n📎 ${pendingAttachments.map(a => a.name).join(', ')}`
+      : trimmed;
 
     appendMsg({ type: 'text', content: { text: userText }, position: 'right', token_cost: null });
     const assistantId = appendMsg({
@@ -104,21 +212,20 @@ export function useChat(options = {}) {
     });
 
     const token = localStorage.getItem('access_token');
-    const accRef   = { value: '' };   // متن جمع‌شده
-    const costRef  = { value: null }; // هزینه از SSE (اگه بک‌اند بفرسته)
+    const accRef   = { value: '' };
+    const costRef  = { value: null };
 
-    // موجودی قبل از ارسال
     let balanceBefore = null;
     try {
       const { data } = await api.get('/api/wallet/balance');
       balanceBefore = data.wallet_balance;
-    } catch { /* اگه نشد مشکلی نیست */ }
+    } catch { }
 
     try {
       await readChatSSE('/api/chat/stream-demo', {
         token,
         body: {
-          text: val.trim(),
+          text: trimmed,
           conversation_id: conversationIdRef.current,
           model: selectedModel,
           attachments: pendingAttachments,
@@ -132,7 +239,6 @@ export function useChat(options = {}) {
               setIsModelLocked(true);
               if (isNew) setRefreshTrigger(prev => prev + 1);
             }
-            // روش ۱: بک‌اند مستقیم token_cost فرستاده
             if (j.token_cost != null) costRef.value = j.token_cost;
             if (j.error) accRef.value += `\n⚠️ ${j.error}`;
             if (j.chunk != null) accRef.value += j.chunk;
@@ -158,17 +264,15 @@ export function useChat(options = {}) {
       return;
     }
 
-    // روش ۲: اگه بک‌اند token_cost نفرستاد، از تفاضل موجودی حساب کن
     if (costRef.value == null && balanceBefore != null) {
       try {
         const { data } = await api.get('/api/wallet/balance');
         const balanceAfter = data.wallet_balance;
         const diff = balanceBefore - balanceAfter;
         if (diff > 0) costRef.value = diff;
-      } catch { /* اگه نشد نشون نده */ }
+      } catch { }
     }
 
-    // cost رو set کن — حتماً بعد از stream
     updateMsg(assistantId, {
       type: 'text',
       content: { text: accRef.value },
@@ -178,7 +282,7 @@ export function useChat(options = {}) {
 
     setPendingAttachments([]);
     onDoneRef.current?.();
-  }, [appendMsg, pendingAttachments, selectedModel, updateMsg]);
+  }, [appendMsg, generateImage, pendingAttachments, selectedModel, updateMsg]);
 
   const resetChat = useCallback(() => {
     conversationIdRef.current = null;
@@ -187,22 +291,12 @@ export function useChat(options = {}) {
     setPendingAttachments([]);
   }, []);
 
-  const refreshConversations = useCallback(async () => {
-    try {
-      const response = await api.get('/conversations'); // فرض می‌کنیم این مسیر لیست مکالمات را بازمی‌گرداند
-      if (response.status === 200) {
-        setRefreshTrigger(prev => prev + 1); // سیگنال برای به‌روزرسانی کامپوننت‌های دیگر
-      }
-    } catch (error) {
-      console.error('Failed to refresh conversations:', error);
-    }
-  }, []);
-
   return {
     messages, onSend, resetList: resetChat,
     selectedModel, setSelectedModel, isModelLocked,
     pendingAttachments, addAttachments, removeAttachment,
     loadConversation, refreshTrigger,
-    refreshConversations,
+    isGeneratingImage,
+    generateImage,
   };
 }

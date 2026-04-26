@@ -3,18 +3,18 @@ import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
 import './TopBar.css';
 
-const MODEL_OPTIONS = [
-  { value: 'openai/gpt-4o-mini',              label: 'GPT-4o mini' },
-  { value: 'openai/gpt-4o',                   label: 'GPT-4o' },
-  { value: 'openai/gpt-5-chat',               label: 'GPT-5' },
-  { value: 'google/gemini-2.5-flash',     label: 'Gemini 2.5 Flash' },
-  { value: 'google/gemini-2.5-flash-lite',     label: 'Gemini 2.5 Flash Lite' },
-  { value: 'google/gemini-2.5-pro',           label: 'Gemini 2.5 Pro' },
-  { value: 'google/gemini-3-flash-preview',           label: 'Gemini 3 Flash' },
-  { value: 'google/gemini-3.1-flash-lite-preview',           label: 'Gemini 3 Flash Lite' },
-  { value: 'deepseek/deepseek-v3.2',         label: 'DeepSeek V3.2' },
-  { value: 'deepseek/deepseek-r1',         label: 'DeepSeek R1' },
-  { value: 'google/gemini-3.1-flash-image-preview',         label: 'Nano Banana' },
+export const MODEL_OPTIONS = [
+  { value: 'openai/gpt-4o-mini',                          label: 'GPT-4o mini',         badge: 'fast' },
+  { value: 'openai/gpt-4o',                               label: 'GPT-4o',              badge: 'smart' },
+  { value: 'openai/gpt-5-chat',                           label: 'GPT-5',               badge: 'powerful' },
+  { value: 'google/gemini-2.5-flash',                     label: 'Gemini 2.5 Flash',    badge: 'fast' },
+  { value: 'google/gemini-2.5-flash-lite',                label: 'Gemini 2.5 Flash Lite', badge: 'cheap' },
+  { value: 'google/gemini-2.5-pro',                       label: 'Gemini 2.5 Pro',      badge: 'smart' },
+  { value: 'google/gemini-3-flash-preview',               label: 'Gemini 3 Flash',      badge: 'new' },
+  { value: 'google/gemini-3.1-flash-lite-preview',        label: 'Gemini 3 Flash Lite', badge: 'cheap' },
+  { value: 'deepseek/deepseek-v3.2',                      label: 'DeepSeek V3.2',       badge: 'smart' },
+  { value: 'deepseek/deepseek-r1',                        label: 'DeepSeek R1',         badge: 'reason' },
+  { value: 'google/gemini-3.1-flash-image-preview',       label: 'Nano Banana 🍌',      badge: 'image' },
 ];
 
 const IconMenu = () => (
@@ -39,9 +39,33 @@ const IconChevron = () => (
   </svg>
 );
 
+function PricingTag({ pricing, modelId, language }) {
+  if (!pricing || !pricing[modelId]) return null;
+  const p = pricing[modelId];
+  const isRtl = language === 'fa';
+
+  // Use input price as representative, round to nearest 10
+  const inputPer1k = p.input_toman_per_1k;
+  if (!inputPer1k && inputPer1k !== 0) return null;
+
+  let label;
+  if (inputPer1k === 0) {
+    label = isRtl ? 'رایگان' : 'Free';
+  } else if (inputPer1k < 1) {
+    label = isRtl ? `~${p.input_usd_per_1m.toFixed(3)}$/M` : `~$${p.input_usd_per_1m.toFixed(3)}/M`;
+  } else {
+    label = isRtl
+      ? `~${inputPer1k.toLocaleString('fa-IR')} ت/۱ک`
+      : `~${inputPer1k.toLocaleString('en-US')}T/1k`;
+  }
+
+  return <span className="topbar__model-price">{label}</span>;
+}
+
 export default function TopBar({
   onToggleSidebar, language, onLanguageChange,
   selectedModel, onModelChange, isModelLocked,
+  onOpenSettings,
 }) {
   const { balance, requestTopup, fetchBalance } = useUser();
   const { theme, toggleTheme } = useTheme();
@@ -53,9 +77,23 @@ export default function TopBar({
   const [topupError, setTopupError] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [modelPricing, setModelPricing] = useState(null);
 
   const walletRef = useRef(null);
   const modelRef = useRef(null);
+
+  // Fetch model pricing once
+  useEffect(() => {
+    const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    fetch(`${API_URL}/api/models/pricing`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => setModelPricing(data.models || null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -101,13 +139,24 @@ export default function TopBar({
   };
 
   const t = {
-    fa: { wallet: 'کیف پول', toman: 'تومان', charge: 'افزایش موجودی', chargeMin: 'حداقل ۳۰٬۰۰۰ تومان', pay: 'پرداخت با زرین‌پال', model: 'مدل هوش مصنوعی' },
-    en: { wallet: 'Wallet', toman: 'Toman', charge: 'Top Up', chargeMin: 'Minimum 30,000', pay: 'Pay with ZarinPal', model: 'AI Model', model: 'AI Model' },
+    fa: { wallet: 'کیف پول', toman: 'تومان', charge: 'افزایش موجودی', chargeMin: 'حداقل ۳۰٬۰۰۰ تومان', pay: 'پرداخت با زرین‌پال', model: 'مدل هوش مصنوعی', settings: 'تنظیمات' },
+    en: { wallet: 'Wallet', toman: 'Toman', charge: 'Top Up', chargeMin: 'Minimum 30,000', pay: 'Pay with ZarinPal', model: 'AI Model', settings: 'Settings' },
   }[language];
 
-  const currentModelLabel = isMobile 
-    ? truncateModelName(MODEL_OPTIONS.find(m => m.value === selectedModel)?.label || selectedModel)
-    : (MODEL_OPTIONS.find(m => m.value === selectedModel)?.label || selectedModel);
+  const currentModelOption = MODEL_OPTIONS.find(m => m.value === selectedModel);
+  const currentModelLabel = isMobile
+    ? truncateModelName(currentModelOption?.label || selectedModel)
+    : (currentModelOption?.label || selectedModel);
+
+  const badgeColors = {
+    fast: '#00d4aa',
+    smart: '#7c6af7',
+    cheap: '#34d399',
+    new: '#f59e0b',
+    image: '#ec4899',
+    reason: '#60a5fa',
+    powerful: '#f97316',
+  };
 
   return (
     <div className="topbar" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -120,23 +169,52 @@ export default function TopBar({
             className="topbar__model-btn"
             onClick={() => !isModelLocked && setShowModel(s => !s)}
             disabled={isModelLocked}
-            title={currentModelLabel}
+            title={currentModelOption?.label || selectedModel}
           >
             <span>{currentModelLabel}</span>
             {isModelLocked ? <span className="lock">🔒</span> : <IconChevron />}
           </button>
           {showModel && (
             <div className="topbar__model-dropdown">
-              {MODEL_OPTIONS.map(m => (
-                <button
-                  key={m.value}
-                  className={`topbar__model-option ${m.value === selectedModel ? 'active' : ''}`}
-                  onClick={() => { onModelChange(m.value); setShowModel(false); }}
-                >
-                  {m.label}
-                  {m.value === selectedModel && <span className="check">✓</span>}
-                </button>
-              ))}
+              <div className="topbar__model-header">
+                {isRtl ? 'انتخاب مدل' : 'Select Model'}
+              </div>
+              {MODEL_OPTIONS.map(m => {
+                const p = modelPricing && modelPricing[m.value];
+                return (
+                  <button
+                    key={m.value}
+                    className={`topbar__model-option ${m.value === selectedModel ? 'active' : ''}`}
+                    onClick={() => { onModelChange(m.value); setShowModel(false); }}
+                  >
+                    <div className="topbar__model-option-left">
+                      <span
+                        className="topbar__model-badge"
+                        style={{ background: badgeColors[m.badge] || '#666', opacity: 0.85 }}
+                      >
+                        {m.badge}
+                      </span>
+                      <span className="topbar__model-name">{m.label}</span>
+                    </div>
+                    <div className="topbar__model-option-right">
+                      {p ? (
+                        <span className="topbar__model-price-inline">
+                          {p.input_toman_per_1k === 0
+                            ? (isRtl ? 'رایگان' : 'Free')
+                            : isRtl
+                              ? `${p.input_toman_per_1k.toLocaleString('fa-IR')}ت/۱ک`
+                              : `${p.input_toman_per_1k.toLocaleString()}T/1k`
+                          }
+                        </span>
+                      ) : null}
+                      {m.value === selectedModel && <span className="check">✓</span>}
+                    </div>
+                  </button>
+                );
+              })}
+              <div className="topbar__model-footer">
+                {isRtl ? '* قیمت تقریبی به ازای هر ۱۰۰۰ توکن ورودی' : '* Approx. cost per 1k input tokens'}
+              </div>
             </div>
           )}
         </div>
@@ -149,6 +227,14 @@ export default function TopBar({
         <button className="topbar__lang-btn" onClick={() => onLanguageChange(language === 'fa' ? 'en' : 'fa')}>
           {language === 'fa' ? 'EN' : 'FA'}
         </button>
+        {onOpenSettings && (
+          <button className="topbar__icon-btn" onClick={onOpenSettings} title={t.settings}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
 
         <div className="topbar__wallet-wrap" ref={walletRef}>
           <div className="topbar__wallet" onClick={() => { setShowWallet(s => !s); fetchBalance(); }} role="button" tabIndex={0}>

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Sidebar from '../components/Sidebar/Sidebar';
 import TopBar from '../components/TopBar/TopBar';
 import ChatArea from '../components/ChatArea/ChatArea';
+import SettingsModal from '../components/SettingsModal/SettingsModal';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useChat } from '../hooks/useChat';
@@ -16,6 +17,7 @@ export default function ChatPage() {
     () => window.innerWidth > 900
   );
   const [activeConvId, setActiveConvId] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const {
     messages, onSend, resetList,
@@ -58,7 +60,7 @@ export default function ChatPage() {
           refreshTrigger={refreshTrigger}
           activeConversationId={activeConvId}
           language={language}
-          onOpenSettings={() => {}}
+          onOpenSettings={() => setShowSettings(true)}
           onClose={() => setSidebarOpen(false)}
         />
       </div>
@@ -76,6 +78,7 @@ export default function ChatPage() {
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
           isModelLocked={isModelLocked}
+          onOpenSettings={() => setShowSettings(true)}
         />
         <ChatArea
           messages={messages}
@@ -86,6 +89,13 @@ export default function ChatPage() {
           onRemoveAttachment={removeAttachment}
         />
       </div>
+
+      {showSettings && (
+        <SettingsModal
+          language={language}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 }

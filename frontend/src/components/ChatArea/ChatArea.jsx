@@ -19,6 +19,13 @@ const IconPaperclip = () => (
       stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
   </svg>
 );
+const IconImage = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+    <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+    <circle cx="5.5" cy="6" r="1.2" stroke="currentColor" strokeWidth="1.1"/>
+    <path d="M1.5 11l3.5-3.5 2.5 2.5 2-2 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 const IconInfo = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
     <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
@@ -26,13 +33,10 @@ const IconInfo = () => (
   </svg>
 );
 
-/* فرمت هزینه به تومان */
 function formatCost(toman, lang) {
   if (toman == null || toman <= 0) return null;
   const rounded = Math.round(toman);
-  if (lang === 'fa') {
-    return `${rounded.toLocaleString('fa-IR')} تومان`;
-  }
+  if (lang === 'fa') return `${rounded.toLocaleString('fa-IR')} تومان`;
   return `${rounded.toLocaleString('en-US')} T`;
 }
 
@@ -40,7 +44,6 @@ function CostBadge({ cost, language }) {
   const [show, setShow] = useState(false);
   const label = formatCost(cost, language);
   if (!label) return null;
-
   return (
     <div className="chat-msg__cost-wrap">
       <button
@@ -71,7 +74,6 @@ function IconCopy() {
     </svg>
   );
 }
-
 function IconShare() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -80,7 +82,6 @@ function IconShare() {
     </svg>
   );
 }
-
 function IconCheck() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -88,36 +89,93 @@ function IconCheck() {
     </svg>
   );
 }
+function IconDownload() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2v14M8 12l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 20h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function ImageMessage({ msg, language }) {
+  const { imageUrl, prompt } = msg.content || {};
+  console.log('Rendering ImageMessage with URL:', imageUrl);
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = imageUrl;
+    a.download = `loghme-image-${Date.now()}.png`;
+    a.click();
+  };
+
+  return (
+    <div className="chat-msg ai">
+      <div className="chat-msg__avatar">ل</div>
+      <div className="chat-msg__bubble-wrap">
+        <div className="chat-msg__bubble chat-msg__bubble--image">
+          <img
+            src={`http://localhost:8000${imageUrl}`}
+            alt={prompt || 'generated'}
+            className="chat-msg__generated-image"
+            loading="lazy"
+          />
+          {prompt && (
+            <div className="chat-msg__image-prompt">
+              🍌 {prompt}
+            </div>
+          )}
+        </div>
+        <div className="chat-msg__actions">
+          <CostBadge cost={msg.token_cost} language={language} />
+          <button className="chat-msg__action-btn" onClick={handleDownload} title="Download">
+            <IconDownload />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageLoadingMessage() {
+  return (
+    <div className="chat-msg ai">
+      <div className="chat-msg__avatar">ل</div>
+      <div className="chat-msg__bubble-wrap">
+        <div className="chat-msg__bubble chat-msg__bubble--image-loading">
+          <div className="image-generating">
+            <div className="image-generating__spinner" />
+            <span>🍌 در حال ساخت تصویر...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({ msg, language }) {
   const isUser = msg.position === 'right';
   const isEmpty = !msg.content?.text;
 
   const [copied, setCopied] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  
+  // Route by type
+  if (msg.type === 'image') return <ImageMessage msg={msg} language={language} />;
+  if (msg.type === 'image-loading') return <ImageLoadingMessage />;
 
   const handleCopy = async () => {
     if (!msg.content?.text) return;
-
     await navigator.clipboard.writeText(msg.content.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   const text = encodeURIComponent(msg.content?.text || '');
-
   const shareOptions = [
-    {
-      name: 'Telegram',
-      url: `https://t.me/share/url?text=${text}`,
-    },
-    {
-      name: 'WhatsApp',
-      url: `https://wa.me/?text=${text}`,
-    },
-    {
-      name: 'Twitter',
-      url: `https://twitter.com/intent/tweet?text=${text}`,
-    },
+    { name: 'Telegram', url: `https://t.me/share/url?text=${text}` },
+    { name: 'WhatsApp', url: `https://wa.me/?text=${text}` },
+    { name: 'Twitter',  url: `https://twitter.com/intent/tweet?text=${text}` },
   ];
 
   return (
@@ -125,13 +183,10 @@ function MessageBubble({ msg, language }) {
       <div className="chat-msg__avatar">
         {isUser ? '👤' : 'ل'}
       </div>
-
       <div className="chat-msg__bubble-wrap">
         <div className="chat-msg__bubble">
           {isEmpty && !isUser ? (
-            <div className="typing-indicator">
-              <span/><span/><span/>
-            </div>
+            <div className="typing-indicator"><span/><span/><span/></div>
           ) : isUser ? (
             <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content?.text}</span>
           ) : (
@@ -140,50 +195,34 @@ function MessageBubble({ msg, language }) {
             </ReactMarkdown>
           )}
         </div>
-
         {!isUser && (
           <div className="chat-msg__actions">
-
             {msg.token_cost != null && (
               <>
-              <CostBadge cost={msg.token_cost} language={language} />
-              <button
-              className="chat-msg__action-btn"
-              onClick={handleCopy}
-            >
-              {copied ? <IconCheck /> : <IconCopy />}
-            </button>
-
-            <div className="chat-msg__share-wrap">
-              <button
-                className="chat-msg__action-btn"
-                onClick={() => setShowShare(v => !v)}
-              >
-                <IconShare />
-              </button>
-
-              {showShare && (
-                <div className="chat-msg__share-popover">
-                  {shareOptions.map((opt) => (
-                    <button
-                      key={opt.name}
-                      onClick={() => {
-                        window.open(opt.url, '_blank');
-                        setShowShare(false);
-                      }}
-                      className="chat-msg__share-item"
-                    >
-                      {opt.name}
-                    </button>
-                  ))}
+                <CostBadge cost={msg.token_cost} language={language} />
+                <button className="chat-msg__action-btn" onClick={handleCopy}>
+                  {copied ? <IconCheck /> : <IconCopy />}
+                </button>
+                <div className="chat-msg__share-wrap">
+                  <button className="chat-msg__action-btn" onClick={() => setShowShare(v => !v)}>
+                    <IconShare />
+                  </button>
+                  {showShare && (
+                    <div className="chat-msg__share-popover">
+                      {shareOptions.map((opt) => (
+                        <button
+                          key={opt.name}
+                          onClick={() => { window.open(opt.url, '_blank'); setShowShare(false); }}
+                          className="chat-msg__share-item"
+                        >
+                          {opt.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-
-
               </>
             )}
-            
           </div>
         )}
       </div>
@@ -194,25 +233,31 @@ function MessageBubble({ msg, language }) {
 export default function ChatArea({
   messages, onSend, language,
   pendingAttachments, onPickFiles, onRemoveAttachment,
+  onImageGenerate,
 }) {
   const isRtl = language === 'fa';
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const [text, setText] = useState('');
+  const [showImageTip, setShowImageTip] = useState(false);
 
   const t = {
     fa: {
-      placeholder: 'پیام خود را بنویسید…',
+      placeholder: 'پیام خود را بنویسید… (برای ساخت تصویر: /تصویر …)',
       hint: 'Enter برای ارسال  •  Shift+Enter برای خط جدید',
       emptyTitle: 'چطور می‌تونم کمک کنم؟',
       emptyDesc: 'هر سوالی داری اینجام.',
+      imageTip: 'ساخت تصویر با Nano Banana 🍌',
+      imagePlaceholder: 'مثال: /تصویر یک گربه نارنجی روی ماه',
     },
     en: {
-      placeholder: 'Send a message…',
+      placeholder: 'Send a message… (for image: /image …)',
       hint: 'Enter to send  •  Shift+Enter for newline',
       emptyTitle: 'How can I help?',
       emptyDesc: 'Ask me anything.',
+      imageTip: 'Generate image with Nano Banana 🍌',
+      imagePlaceholder: 'Example: /image an orange cat on the moon',
     },
   }[language];
 
@@ -243,6 +288,20 @@ export default function ChatArea({
     }
   };
 
+  const handleImageBtnClick = () => {
+    // Insert /image or /تصویر prefix
+    const prefix = isRtl ? '/تصویر ' : '/image ';
+    setText(prefix);
+    textareaRef.current?.focus();
+  };
+
+  // Detect PDF in attachments
+  const getPdfIcon = (att) => {
+    if (att.mime_type === 'application/pdf') return '📄';
+    if (att.mime_type?.startsWith('image/')) return '🖼️';
+    return '📎';
+  };
+
   const hasMessages = messages && messages.length > 0;
 
   return (
@@ -253,6 +312,11 @@ export default function ChatArea({
             <div className="chat-area__empty-icon">ل</div>
             <h2>{t.emptyTitle}</h2>
             <p>{t.emptyDesc}</p>
+            <div className="chat-area__empty-tip">
+              <span>🍌</span>
+              <span>{t.imageTip}</span>
+              <code className="chat-area__empty-tip-code">{t.imagePlaceholder}</code>
+            </div>
           </div>
         ) : (
           <div className="chat-area__messages-inner">
@@ -269,8 +333,8 @@ export default function ChatArea({
           {pendingAttachments.length > 0 && (
             <div className="composer__attachments">
               {pendingAttachments.map((att, i) => (
-                <div key={`${att.name}-${i}`} className="composer__att-chip">
-                  <span>📄 {att.name}</span>
+                <div key={`${att.name}-${i}`} className={`composer__att-chip ${att.mime_type === 'application/pdf' ? 'composer__att-chip--pdf' : ''}`}>
+                  <span>{getPdfIcon(att)} {att.name}</span>
                   <button className="composer__att-remove" onClick={() => onRemoveAttachment(i)}>✕</button>
                 </div>
               ))}
@@ -290,13 +354,29 @@ export default function ChatArea({
             />
             <div className="composer__actions">
               <button
+                className="composer__image-btn"
+                onClick={handleImageBtnClick}
+                title={t.imageTip}
+                aria-label={t.imageTip}
+              >
+                <IconImage />
+              </button>
+              <button
                 className="composer__attach-btn"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="attach"
               >
                 <IconPaperclip />
               </button>
-              <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={onPickFiles} />
+              {/* Accept images AND PDFs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,text/*,.json,.js,.ts,.jsx,.tsx,.py,.md,.csv,.yaml,.yml"
+                style={{ display: 'none' }}
+                onChange={onPickFiles}
+              />
               <button
                 className="composer__send-btn"
                 onClick={handleSubmit}

@@ -13,4 +13,5 @@ class User(SQLModel, table=True):
     hashed_password: str
     wallet_balance: float = Field(default=0.0)
     long_term_memory: str = Field(default="")
+    long_term_memory_enabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)

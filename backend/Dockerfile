@@ -9,6 +9,8 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN mkdir -p assets
+
 COPY app ./app
 
 EXPOSE 8000

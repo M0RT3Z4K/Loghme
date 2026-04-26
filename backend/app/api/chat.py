@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 import asyncio
+import base64
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -42,6 +43,8 @@ class AttachmentBody(BaseModel):
     mime_type: str
     data_url: str | None = None
     text_content: str | None = None
+    # New: raw base64 for PDFs (without the data: prefix)
+    pdf_base64: str | None = None
 
 
 class StreamChatBody(BaseModel):
@@ -54,8 +57,25 @@ class StreamChatBody(BaseModel):
 def _build_user_content(text: str, attachments: list[AttachmentBody]) -> list[dict]:
     parts: list[dict] = [{"type": "text", "text": text}]
     for att in attachments:
-        if att.mime_type.startswith("image/") and att.data_url:
+        mime = att.mime_type or ""
+        if mime.startswith("image/") and att.data_url:
             parts.append({"type": "image_url", "image_url": {"url": att.data_url}})
+        elif mime == "application/pdf" and att.pdf_base64:
+            # Send PDF as document block (supported by many OpenRouter models)
+            parts.append({
+                "type": "text",
+                "text": f"[PDF Attachment: {att.name}]\nThe following is the extracted content from the PDF:\n"
+            })
+            if att.text_content:
+                parts.append({
+                    "type": "text",
+                    "text": att.text_content,
+                })
+            else:
+                parts.append({
+                    "type": "text",
+                    "text": "[Binary PDF - content could not be extracted as text]",
+                })
         elif att.text_content:
             parts.append(
                 {
@@ -93,7 +113,6 @@ def get_conversations(
             .where(Message.conversation_id == c.id)
         ).all()
         
-        # Only include conversations that have both user and assistant messages
         has_user = any(m.role == "user" for m in messages)
         has_assistant = any(m.role == "assistant" for m in messages)
         
@@ -117,7 +136,6 @@ def get_conversation_messages(
     user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session),
 ):
-    """Get all messages for a specific conversation."""
     uid = int(user_id)
     conversation = session.get(Conversation, conversation_id)
     if not conversation or conversation.user_id != uid:
@@ -129,7 +147,6 @@ def get_conversation_messages(
         .order_by(Message.id)
     ).all()
     
-    # Check if conversation has both user and assistant messages
     has_user = any(m.role == "user" for m in messages)
     has_assistant = any(m.role == "assistant" for m in messages)
     
@@ -162,7 +179,6 @@ async def stream_demo(
     user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session),
 ) -> StreamingResponse:
-    """Stream OpenRouter responses and persist conversations/messages."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Message text is required")
@@ -218,24 +234,20 @@ async def stream_demo(
         .order_by(Message.id)
     ).all()
     
-    # Get exchange rate and pricing in parallel (fast operations with cache)
-    # Use cached exchange rate and pricing instead of synchronous calls
     usd_to_toman, pricing = await asyncio.gather(
         get_usd_to_toman_rate(),
         get_model_pricing(selected_model),
         return_exceptions=True,
     )
     
-    # Handle potential errors
     if isinstance(usd_to_toman, Exception):
         usd_to_toman = float(settings.openrouter_usd_to_toman)
     if isinstance(pricing, Exception):
         pricing = await get_model_pricing(selected_model)
     
-    # Use existing summary (don't re-compute it on every request)
     summary = conversation.memory_summary or ""
 
-    recent_history = history[-settings.short_term_max_messages :]
+    recent_history = history[-settings.short_term_max_messages:]
     openrouter_messages: list[dict] = []
     if user.long_term_memory.strip():
         openrouter_messages.append(
@@ -354,19 +366,14 @@ def delete_conversation(
     user_id: str = Depends(get_current_user_id),
     session: Session = Depends(get_session),
 ):
-    """Delete a specific conversation."""
     uid = int(user_id)
     conversation = session.get(Conversation, conversation_id)
     if not conversation or conversation.user_id != uid:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    # Delete all messages associated with the conversation
     session.exec(
         delete(Message).where(Message.conversation_id == conversation_id)
     )
-
-    # Delete the conversation itself
     session.delete(conversation)
     session.commit()
-
     return {"detail": "Conversation deleted successfully"}
