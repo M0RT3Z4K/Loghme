@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     openrouter_default_max_output_tokens: int = 800
     short_term_max_messages: int = 10
     min_wallet_topup_toman: int = 30000
-    zarinpal_merchant_id: str | None = None
+    zarinpal_merchant_id: str = '6cd3e482-d938-44dc-bbdb-d8516ae7d6e8'
     zarinpal_request_url: str = "https://payment.zarinpal.com/pg/v4/payment/request.json"
     zarinpal_verify_url: str = "https://payment.zarinpal.com/pg/v4/payment/verify.json"
     zarinpal_startpay_base: str = "https://payment.zarinpal.com/pg/StartPay/"

@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './ChatArea.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 const IconSend = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path d="M14 8L2 2l3 6-3 6 12-6Z" fill="currentColor"/>
@@ -17,13 +19,6 @@ const IconPaperclip = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path d="M13.5 7.5l-6 6a4 4 0 0 1-5.657-5.657l6.364-6.364a2.5 2.5 0 0 1 3.535 3.535L5.379 11.38a1 1 0 0 1-1.414-1.414l5.657-5.657"
       stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-  </svg>
-);
-const IconImage = () => (
-  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-    <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-    <circle cx="5.5" cy="6" r="1.2" stroke="currentColor" strokeWidth="1.1"/>
-    <path d="M1.5 11l3.5-3.5 2.5 2.5 2-2 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const IconInfo = () => (
@@ -98,14 +93,21 @@ function IconDownload() {
   );
 }
 
+/** Resolve image URL — prefix API_URL for relative paths */
+function resolveImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${API_URL}${url}`;
+}
+
 function ImageMessage({ msg, language }) {
   const { imageUrl, prompt } = msg.content || {};
-  console.log('Rendering ImageMessage with URL:', imageUrl);
 
   const handleDownload = () => {
     const a = document.createElement('a');
-    a.href = imageUrl;
+    a.href = resolveImageUrl(imageUrl);
     a.download = `loghme-image-${Date.now()}.png`;
+    a.target = '_blank';
     a.click();
   };
 
@@ -115,15 +117,13 @@ function ImageMessage({ msg, language }) {
       <div className="chat-msg__bubble-wrap">
         <div className="chat-msg__bubble chat-msg__bubble--image">
           <img
-            src={`http://localhost:8000${imageUrl}`}
+            src={resolveImageUrl(imageUrl)}
             alt={prompt || 'generated'}
             className="chat-msg__generated-image"
             loading="lazy"
           />
           {prompt && (
-            <div className="chat-msg__image-prompt">
-              🍌 {prompt}
-            </div>
+            <div className="chat-msg__image-prompt">🎨 {prompt}</div>
           )}
         </div>
         <div className="chat-msg__actions">
@@ -137,7 +137,8 @@ function ImageMessage({ msg, language }) {
   );
 }
 
-function ImageLoadingMessage() {
+function ImageLoadingMessage({ language }) {
+  const label = language === 'fa' ? 'در حال ساخت تصویر…' : 'Generating image…';
   return (
     <div className="chat-msg ai">
       <div className="chat-msg__avatar">ل</div>
@@ -145,7 +146,7 @@ function ImageLoadingMessage() {
         <div className="chat-msg__bubble chat-msg__bubble--image-loading">
           <div className="image-generating">
             <div className="image-generating__spinner" />
-            <span>🍌 در حال ساخت تصویر...</span>
+            <span>🎨 {label}</span>
           </div>
         </div>
       </div>
@@ -156,13 +157,11 @@ function ImageLoadingMessage() {
 function MessageBubble({ msg, language }) {
   const isUser = msg.position === 'right';
   const isEmpty = !msg.content?.text;
-
   const [copied, setCopied] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  
-  // Route by type
+
   if (msg.type === 'image') return <ImageMessage msg={msg} language={language} />;
-  if (msg.type === 'image-loading') return <ImageLoadingMessage />;
+  if (msg.type === 'image-loading') return <ImageLoadingMessage language={language} />;
 
   const handleCopy = async () => {
     if (!msg.content?.text) return;
@@ -175,14 +174,12 @@ function MessageBubble({ msg, language }) {
   const shareOptions = [
     { name: 'Telegram', url: `https://t.me/share/url?text=${text}` },
     { name: 'WhatsApp', url: `https://wa.me/?text=${text}` },
-    { name: 'Twitter',  url: `https://twitter.com/intent/tweet?text=${text}` },
+    { name: 'Twitter', url: `https://twitter.com/intent/tweet?text=${text}` },
   ];
 
   return (
     <div className={`chat-msg ${isUser ? 'user' : 'ai'}`}>
-      <div className="chat-msg__avatar">
-        {isUser ? '👤' : 'ل'}
-      </div>
+      <div className="chat-msg__avatar">{isUser ? '👤' : 'ل'}</div>
       <div className="chat-msg__bubble-wrap">
         <div className="chat-msg__bubble">
           {isEmpty && !isUser ? (
@@ -204,7 +201,7 @@ function MessageBubble({ msg, language }) {
                   {copied ? <IconCheck /> : <IconCopy />}
                 </button>
                 <div className="chat-msg__share-wrap">
-                  <button className="chat-msg__action-btn" onClick={() => setShowShare(v => !v)}>
+                  <button className="chat-msg__action-btn" onClick={() => setShowShare((v) => !v)}>
                     <IconShare />
                   </button>
                   {showShare && (
@@ -233,31 +230,25 @@ function MessageBubble({ msg, language }) {
 export default function ChatArea({
   messages, onSend, language,
   pendingAttachments, onPickFiles, onRemoveAttachment,
-  onImageGenerate,
 }) {
   const isRtl = language === 'fa';
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const [text, setText] = useState('');
-  const [showImageTip, setShowImageTip] = useState(false);
 
   const t = {
     fa: {
-      placeholder: 'پیام خود را بنویسید… (برای ساخت تصویر: /تصویر …)',
+      placeholder: 'پیام خود را بنویسید…',
       hint: 'Enter برای ارسال  •  Shift+Enter برای خط جدید',
       emptyTitle: 'چطور می‌تونم کمک کنم؟',
-      emptyDesc: 'هر سوالی داری اینجام.',
-      imageTip: 'ساخت تصویر با Nano Banana 🍌',
-      imagePlaceholder: 'مثال: /تصویر یک گربه نارنجی روی ماه',
+      emptyDesc: 'هر سوالی داری یا تصویری که میخوای بسازی، اینجام.',
     },
     en: {
-      placeholder: 'Send a message… (for image: /image …)',
+      placeholder: 'Send a message…',
       hint: 'Enter to send  •  Shift+Enter for newline',
       emptyTitle: 'How can I help?',
-      emptyDesc: 'Ask me anything.',
-      imageTip: 'Generate image with Nano Banana 🍌',
-      imagePlaceholder: 'Example: /image an orange cat on the moon',
+      emptyDesc: 'Ask me anything or describe an image to create.',
     },
   }[language];
 
@@ -288,14 +279,6 @@ export default function ChatArea({
     }
   };
 
-  const handleImageBtnClick = () => {
-    // Insert /image or /تصویر prefix
-    const prefix = isRtl ? '/تصویر ' : '/image ';
-    setText(prefix);
-    textareaRef.current?.focus();
-  };
-
-  // Detect PDF in attachments
   const getPdfIcon = (att) => {
     if (att.mime_type === 'application/pdf') return '📄';
     if (att.mime_type?.startsWith('image/')) return '🖼️';
@@ -312,11 +295,6 @@ export default function ChatArea({
             <div className="chat-area__empty-icon">ل</div>
             <h2>{t.emptyTitle}</h2>
             <p>{t.emptyDesc}</p>
-            <div className="chat-area__empty-tip">
-              <span>🍌</span>
-              <span>{t.imageTip}</span>
-              <code className="chat-area__empty-tip-code">{t.imagePlaceholder}</code>
-            </div>
           </div>
         ) : (
           <div className="chat-area__messages-inner">
@@ -333,7 +311,10 @@ export default function ChatArea({
           {pendingAttachments.length > 0 && (
             <div className="composer__attachments">
               {pendingAttachments.map((att, i) => (
-                <div key={`${att.name}-${i}`} className={`composer__att-chip ${att.mime_type === 'application/pdf' ? 'composer__att-chip--pdf' : ''}`}>
+                <div
+                  key={`${att.name}-${i}`}
+                  className={`composer__att-chip ${att.mime_type === 'application/pdf' ? 'composer__att-chip--pdf' : ''}`}
+                >
                   <span>{getPdfIcon(att)} {att.name}</span>
                   <button className="composer__att-remove" onClick={() => onRemoveAttachment(i)}>✕</button>
                 </div>
@@ -354,21 +335,12 @@ export default function ChatArea({
             />
             <div className="composer__actions">
               <button
-                className="composer__image-btn"
-                onClick={handleImageBtnClick}
-                title={t.imageTip}
-                aria-label={t.imageTip}
-              >
-                <IconImage />
-              </button>
-              <button
                 className="composer__attach-btn"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="attach"
               >
                 <IconPaperclip />
               </button>
-              {/* Accept images AND PDFs */}
               <input
                 ref={fileInputRef}
                 type="file"

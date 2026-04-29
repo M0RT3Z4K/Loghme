@@ -61,8 +61,8 @@ def topup_request(
     user = session.get(User, uid)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if not settings.zarinpal_merchant_id:
-        raise HTTPException(status_code=500, detail="Zarinpal merchant id is not configured")
+    # if not settings.zarinpal_merchant_id:
+    #     raise HTTPException(status_code=500, detail="Zarinpal merchant id is not configured")
 
     amount_for_gateway = body.amount_toman * settings.zarinpal_amount_multiplier
     req_payload = {
